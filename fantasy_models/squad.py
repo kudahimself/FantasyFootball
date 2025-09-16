@@ -7,8 +7,10 @@ from pulp import LpProblem, LpVariable, lpSum, LpMaximize, LpBinary, LpStatus, v
 
 
 class SquadSelector:
-    def __init__(self, csv_path="elo_ratings.csv"):
-        self.csv_path = csv_path
+    def __init__(self, week):
+        self.csv_path = f'weekly_elo/weekly_elo_{week}.csv'
+        print(f"Loading Elo data from: {self.csv_path}")
+        self.week = week
         self.df = pd.read_csv(self.csv_path)
         self.df['Elo'] = self.df['Elo'].astype(float)
         self.df['Cost'] = self.df['Cost'].astype(float)
@@ -56,5 +58,5 @@ class SquadSelector:
         return squads
 
 # Example usage:
-squad = SquadSelector('elo_ratings2.csv')
+squad = SquadSelector(week=4)
 squad.select_top_n_squads()

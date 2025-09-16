@@ -142,7 +142,7 @@ class FootballerEloModel:
                 self.df_player.at[i, 'Elo'] = round((Ra + k * (Pa - E_a)), 3)
             last_elo = self.df_player.at[i, 'Elo']
             
-            self.df_player.to_csv(f'./elo_data2/{self.player_name}_elo.csv', index=False)
+            self.df_player.to_csv(f'./elo_data/{self.player_name}.csv', index=False)
         return last_elo
 
 
@@ -178,7 +178,7 @@ async def all_players_elo():
             print(f"Error processing player {player_name}: {e}")
     elo_df = pd.DataFrame(elo_data)
     elo_df = elo_df.sort_values(by='Elo', ascending=False)
-    elo_df.to_csv('elo_ratings2.csv', index=False)
+    elo_df.to_csv('initial_elo.csv', index=False)
     return elo_df
 
 

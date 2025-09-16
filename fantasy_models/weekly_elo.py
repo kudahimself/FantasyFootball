@@ -7,14 +7,14 @@ class FootballerEloModel:
     
     def __init__(self, player_name):
         self.player_name = player_name
-        self.df_player = pd.read_csv(f"./fbref_data/{self.player_name}.csv")
+        self.df_player = pd.read_csv(f"./elo_data/{self.player_name}.csv")
         self.df_player.dropna(subset=['Date'], inplace=True)  # Ensure 'Date' column has no NaN values
         self.df_player['Date'] = pd.to_datetime(self.df_player['Date'], errors='coerce').dt.strftime('%Y-%m-%d')
         self.df_player.fillna(0, inplace=True)  # Fill NaN values with 0
         if 'Gls' not in self.df_player.columns:
             self.df_player['Gls'] = 0
         if 'Ast' not in self.df_player.columns:
-            self.df_player['Ast'] = 0
+            self.df_player['Ast'] = 0 
         self.df_player = self.df_player[self.df_player['Date'].notna() & (self.df_player['Date'].str.strip() != "")]
         # Ensure 'Saves' column exists for all players
         if 'Saves' not in self.df_player.columns:
@@ -63,6 +63,10 @@ class FootballerEloModel:
             'Keeper': keeper_count
         }
         main_position = max(counts, key=counts.get)
+        if self.player_name in ['João_Pedro_Junqueira_de_Jesus', 'Jarrod_Bowen']:
+            main_position = 'Attacker'
+        elif self.player_name in ['Matheus_Santos_Carneiro_da_Cunha']:
+            main_position = 'Midfielder'
         return main_position
 
 
@@ -147,7 +151,7 @@ class FootballerEloModel:
 
 
 
-async def all_players_elo():
+async def all_players_elo(week):
     """
     Function to calculate Elo ratings for all players.
     """
@@ -178,7 +182,7 @@ async def all_players_elo():
             print(f"Error processing player {player_name}: {e}")
     elo_df = pd.DataFrame(elo_data)
     elo_df = elo_df.sort_values(by='Elo', ascending=False)
-    elo_df.to_csv(f'./initial_elo.csv', index=False)
+    elo_df.to_csv(f'weekly_elo/weekly_elo_{week}.csv', index=False)
     return elo_df
 
 
@@ -199,4 +203,4 @@ async def get_player_cost(player_name):
 import asyncio
 
 if __name__ == "__main__":
-    asyncio.run(all_players_elo(week=2))
+    asyncio.run(all_players_elo(week=4))
