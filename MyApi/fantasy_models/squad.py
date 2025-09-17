@@ -46,25 +46,29 @@ class SquadSelector:
             result = squad_df.iloc[selected]
             squads.append(result)
 
+        squad_dicts = []
         for idx, squad in enumerate(squads, 1):
-            print(f"\nSquad {idx}:")
-            print(f"Total Cost: {squad['Cost'].sum()} million")
-            print(f"Total Elo: {squad['Elo'].sum()}")
-            print(squad)
-            
-        squad_dict = {}
-        squad_dict["goalkeepers"] = ", ".join(squad[squad["Position"] == "Keeper"]["Player"])
-        squad_dict["defenders"] = ", ".join(squad[squad["Position"] == "Defender"]["Player"])
-        squad_dict["midfielders"] = ", ".join(squad[squad["Position"] == "Midfielder"]["Player"])
-        squad_dict["attackers"] = ", ".join(squad[squad["Position"] == "Attacker"]["Player"])
-        print(f"Squad {idx}: {squad_dict}")
-        return squads
+            squad_dict = {
+                "squad_number": idx,
+                "positions": [keeper_count, defender_count, midfielder_count, attacker_count],
+                "players": {
+                    "goalkeepers": [{"name": player} for player in squad[squad["Position"] == "Keeper"]["Player"]],
+                    "defenders": [{"name": player} for player in squad[squad["Position"] == "Defender"]["Player"]],
+                    "midfielders": [{"name": player} for player in squad[squad["Position"] == "Midfielder"]["Player"]],
+                    "forwards": [{"name": player} for player in squad[squad["Position"] == "Attacker"]["Player"]]
+                }
+            }
+            squad_dicts.append(squad_dict)
+        
+        print(squad_dicts)
+        
+        return squad_dicts
+
     
     def generate_squads(self):
         squads = SquadSelector(week=4)
         return squads.select_top_n_squads()
         
         
-squads = SquadSelector(week=4)
-squads.select_top_n_squads()
+
 

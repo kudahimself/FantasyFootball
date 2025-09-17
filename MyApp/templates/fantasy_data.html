@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Fantasy Data{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/squads.css' %}">
+
+<style>
+    /* Fantasy Data page: make formation span full screen width */
+    .container-fluid { padding-left: 0 !important; padding-right: 0 !important; }
+    #current-squad { padding: 0 !important; margin: 0 !important; }
+    #squad-content { padding: 0 !important; margin: 0 !important; }
+    #formation {
+        padding: 0 !important;       /* remove inner padding so rows use full width */
+        margin: 0 auto 20px !important;
+        max-width: none !important;  /* drop 1400px cap on this page */
+        width: 100% !important;      /* occupy full available width */
+    }
+    /* Optional: tighten top/bottom spacing for maximum vertical space */
+    h1, h2 { margin-left: 10px; }
+
+    /* Sub-navigation styles (match squads page) */
+    .squad-nav .btn { margin-right: 8px; }
+    .squad-nav .btn:last-child { margin-right: 0; }
+    .squad-nav { padding: 8px 12px; border-bottom: 1px solid #dee2e6; margin-bottom: 1rem; }
+    @media (max-width: 576px) {
+        .squad-nav .btn { margin-bottom: 6px; }
+    }
+</style>
+
+<!-- Second navigation bar: Refresh squad -->
+<nav class="navbar navbar-expand-lg navbar-light bg-light squad-nav">
+    <div class="btn-toolbar w-100" role="toolbar" aria-label="Refresh toolbar">
+        <div class="btn-group" role="group" aria-label="Refresh">
+            <button id="btn-refresh-squad" type="button" class="btn btn-success" onclick="loadCurrentSquad()">Refresh Squad</button>
+        </div>
+    </div>
+</nav>
+
+
+<!-- Add Player Form -->
+<div id="add-player-form" style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 5px;">
+    <h3>Add Player</h3>
+    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <select id="player-position" onchange="loadPlayersForPosition()">
+            <option value="goalkeepers">Goalkeeper</option>
+            <option value="defenders">Defender</option>
+            <option value="midfielders">Midfielder</option>
+            <option value="forwards">Forward</option>
+        </select>
+        <select id="player-select" style="min-width: 200px; padding: 8px; border-radius: 3px; border: 1px solid #ddd;">
+            <option value="">Select a player...</option>
+        </select>
+        <button onclick="addSelectedPlayerToSquad()" style="padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 3px;">Add Player</button>
+        <button onclick="loadAllPlayers()" style="padding: 8px 15px; background: #17a2b8; color: white; border: none; border-radius: 3px;">Refresh Players</button>
+    </div>
+    <div id="player-info" style="margin-top: 10px; font-size: 14px; color: #666;">
+        <!-- Player info will be displayed here -->
+    </div>
+</div>
+
+<!-- Squad Display -->
+<div id="current-squad">
+    <h2>Current Squad</h2>
+    <div id="squad-content">
+        <!-- Squad content will be loaded here -->
+    </div>
+</div>
+
+<!-- Status Messages -->
+<div id="status-message" style="margin: 20px 0; padding: 10px; border-radius: 3px; display: none;"></div>
+
+<script src="{% static 'js/fantasy_data.js' %}"></script>
+
+{% endblock %}

@@ -1,0 +1,71 @@
+<style>
+    #formation {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .formation-row {
+        display: flex;
+        justify-content: space-around;
+        gap: 10px;
+        padding: 10px;
+        background-color: #f2f2f2;
+        border: 1px solid #ccc;
+    }
+
+    .formation-row div {
+        flex: 1;
+        text-align: center;
+        font-weight: bold;
+        padding: 10px;
+    }
+</style>
+
+<div id="formation"></div>
+
+<script>
+    function generateFormationGrid(positions, data) {
+        const formation = document.getElementById('formation');
+        
+        // Clear previous content
+        formation.innerHTML = ''; 
+
+        const goalkeepers = positions[0];
+        const defenders = positions[1];
+        const midfielders = positions[2];
+        const forwards = positions[3];
+
+        const rows = [
+            { label: 'Goalkeeper', count: goalkeepers, players: data?.goalkeepers },
+            { label: 'Defender', count: defenders, players: data?.defenders },
+            { label: 'Midfielder', count: midfielders, players: data?.midfielders },
+            { label: 'Forward', count: forwards, players: data?.forwards }
+        ];
+
+        for (let row of rows) {
+            if (row.count > 0) {
+                const rowContainer = document.createElement('div');
+                rowContainer.classList.add('formation-row');
+
+                for (let i = 0; i < row.count; i++) {
+                    const position = document.createElement('div');
+                    if (row.players && row.players[i]) {
+                        position.textContent = row.players[i].name;
+                    } else {
+                        position.textContent = row.label + ' ' + (i + 1);
+                    }
+                    rowContainer.appendChild(position);
+                }
+                
+                formation.appendChild(rowContainer);
+            }
+        }
+    }
+
+
+    // Call the function to generate the grid
+    const positions = [1, 3, 4, 3]; // Example: 1 GK, 4 DEF, 4 MID, 2 FWD
+    generateFormationGrid(positions);
+</script>
+

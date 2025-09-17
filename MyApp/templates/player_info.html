@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ player_name }} - Player Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Sub-navigation under main navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom mb-3">
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'home' %}">
+                    <i class="fas fa-home"></i> Home
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'player_ratings' %}">
+                    <i class="fas fa-arrow-left"></i> Back to Player Ratings
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'fantasy_data' %}">
+                    <i class="fas fa-users"></i> Squad Builder
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main role="main" class="px-4">
+            {% if error %}
+                <div class="alert alert-warning mt-4">
+                    <h4>{{ error }}</h4>
+                    <p>Could not find player: <strong>{{ player_name }}</strong></p>
+                    {% if similar_players %}
+                        <p>Did you mean one of these players?</p>
+                        <ul>
+                            {% for similar in similar_players %}
+                                <li>
+                                    <a href="{% url 'player_info' similar %}">{{ similar }}</a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            {% else %}
+                <!-- Player Header -->
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="fas fa-user-circle text-primary"></i>
+                        {{ player_name }}
+                    </h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group mr-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+                                <i class="fas fa-print"></i> Print
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Player Statistics Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-2 mb-3">
+                        <div class="card text-center bg-primary text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Current Elo</h5>
+                                <h3 class="card-text">{{ current_elo }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="card text-center bg-success text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Total Matches</h5>
+                                <h3 class="card-text">{{ total_matches }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="card text-center bg-warning text-dark">
+                            <div class="card-body">
+                                <h5 class="card-title">Goals</h5>
+                                <h3 class="card-text">{{ total_goals }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="card text-center bg-info text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Assists</h5>
+                                <h3 class="card-text">{{ total_assists }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="card text-center bg-secondary text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Fantasy Points</h5>
+                                <h3 class="card-text">{{ total_points }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="card text-center bg-dark text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Avg Minutes</h5>
+                                <h3 class="card-text">{{ avg_minutes }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Elo History Chart -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-chart-line"></i> Elo Rating History (Last 20 Matches)</h5>
+                            </div>
+                            <div class="card-body" id="eloChartCardBody">
+                                <canvas id="eloChart" width="400" height="100"></canvas>
+                                <div id="eloChartFallback" class="text-center text-muted py-4" style="display:none;">No Elo history data available for this player.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Form -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-fire"></i> Recent Form (Last 5 Matches)</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Opponent</th>
+                                                <th>Result</th>
+                                                <th>Goals</th>
+                                                <th>Assists</th>
+                                                <th>Minutes</th>
+                                                <th>Points</th>
+                                                <th>Elo After</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for match in recent_matches %}
+                                                <tr>
+                                                    <td>{{ match.date|date:"M d, Y" }}</td>
+                                                    <td>{{ match.opponent }}</td>
+                                                    <td>
+                                                        <span class="badge {% if 'W' in match.result %}badge-success{% elif 'L' in match.result %}badge-danger{% else %}badge-warning{% endif %}">
+                                                            {{ match.result }}
+                                                        </span>
+                                                    </td>
+                                                    <td>{{ match.goals }}</td>
+                                                    <td>{{ match.assists }}</td>
+                                                    <td>{{ match.minutes_played }}'</td>
+                                                    <td>{{ match.points }}</td>
+                                                    <td>{{ match.elo_after_match|floatformat:1 }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Full Match History -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5><i class="fas fa-history"></i> Complete Match History</h5>
+                                <div class="form-group mb-0">
+                                    <input type="text" id="matchSearch" class="form-control form-control-sm" placeholder="Search matches..." style="width: 200px;">
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover" id="matchesTable">
+                                        <thead class="thead-dark">
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Season</th>
+                                                <th>Competition</th>
+                                                <th>Opponent</th>
+                                                <th>Result</th>
+                                                <th>Position</th>
+                                                <th>Minutes</th>
+                                                <th>Goals</th>
+                                                <th>Assists</th>
+                                                <th>Points</th>
+                                                <th>Clean Sheet</th>
+                                                <th>Elo After</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for match in matches %}
+                                                <tr>
+                                                    <td>{{ match.date|date:"M d, Y" }}</td>
+                                                    <td>{{ match.season }}</td>
+                                                    <td>{{ match.competition }}</td>
+                                                    <td>{{ match.opponent }}</td>
+                                                    <td>
+                                                        <span class="badge {% if 'W' in match.result %}badge-success{% elif 'L' in match.result %}badge-danger{% else %}badge-warning{% endif %}">
+                                                            {{ match.result }}
+                                                        </span>
+                                                    </td>
+                                                    <td>{{ match.position|default:"-" }}</td>
+                                                    <td>{{ match.minutes_played }}'</td>
+                                                    <td>{{ match.goals }}</td>
+                                                    <td>{{ match.assists }}</td>
+                                                    <td>{{ match.points }}</td>
+                                                    <td>
+                                                        {% if match.clean_sheet %}
+                                                            <i class="fas fa-check text-success"></i>
+                                                        {% else %}
+                                                            <i class="fas fa-times text-muted"></i>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td><strong>{{ match.elo_after_match|floatformat:1 }}</strong></td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js for Elo history chart -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% if not error %}
+
+<script>
+    window.eloData = JSON.parse('{{ elo_data_json|default:"{}"|escapejs }}');
+    window.playerName = "{{ player_name|escapejs }}";
+</script>
+<script src="{% static 'js/player_info.js' %}"></script>
+{% endif %}
+{% endblock extra_js %}

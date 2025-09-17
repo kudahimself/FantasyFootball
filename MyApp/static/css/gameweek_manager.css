@@ -1,0 +1,229 @@
+/* Game Week Manager CSS */
+
+.gameweek-manager {
+    padding: 20px 0;
+}
+
+.activity-log {
+    max-height: 300px;
+    overflow-y: auto;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 5px;
+    padding: 15px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+}
+
+.activity-log p {
+    margin-bottom: 5px;
+    padding: 3px 0;
+}
+
+.activity-log .log-entry {
+    margin-bottom: 8px;
+    padding: 5px 8px;
+    border-radius: 3px;
+    background: white;
+    border-left: 3px solid #007bff;
+}
+
+.activity-log .log-entry.success {
+    border-left-color: #28a745;
+    background: #d4edda;
+}
+
+.activity-log .log-entry.error {
+    border-left-color: #dc3545;
+    background: #f8d7da;
+}
+
+.activity-log .log-entry.warning {
+    border-left-color: #ffc107;
+    background: #fff3cd;
+}
+
+.activity-log .log-entry.info {
+    border-left-color: #17a2b8;
+    background: #d1ecf1;
+}
+
+.activity-log .timestamp {
+    color: #6c757d;
+    font-size: 12px;
+    margin-right: 10px;
+}
+
+.btn-loading {
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.btn-loading .fas {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Status message styling */
+#status-messages {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 1050;
+    width: 350px;
+}
+
+.status-message {
+    margin-bottom: 10px;
+    padding: 12px 15px;
+    border-radius: 5px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    animation: slideIn 0.3s ease-out;
+}
+
+.status-message.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.status-message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.status-message.warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.status-message.info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+.status-message.fadeOut {
+    animation: slideOut 0.3s ease-out forwards;
+}
+
+/* Card styling improvements */
+.card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: none;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+}
+
+.card-header h5 {
+    margin: 0;
+    color: #495057;
+}
+
+.card-header h6 {
+    margin-bottom: 5px;
+    color: #495057;
+    font-weight: 600;
+}
+
+/* Form styling */
+.form-group label {
+    font-weight: 600;
+    color: #495057;
+}
+
+.form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+/* Button groups */
+.btn-group-vertical .btn {
+    margin-bottom: 10px;
+}
+
+.btn-group-vertical .btn:last-child {
+    margin-bottom: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    #status-messages {
+        position: relative;
+        top: auto;
+        right: auto;
+        width: 100%;
+        margin-bottom: 20px;
+    }
+    
+    .btn-group-vertical .btn {
+        width: 100%;
+    }
+}
+
+/* Loading overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.loading-spinner {
+    color: white;
+    font-size: 24px;
+}
+
+/* Progress bar */
+.progress-container {
+    display: none;
+    margin-top: 15px;
+}
+
+.progress {
+    height: 25px;
+    border-radius: 12px;
+}
+
+.progress-bar {
+    font-size: 14px;
+    line-height: 25px;
+}

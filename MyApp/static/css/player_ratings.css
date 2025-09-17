@@ -1,0 +1,193 @@
+/* Player Ratings Page Styles */
+
+.table-container {
+    overflow-x: auto;
+}
+
+.filters {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+.filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    min-width: 150px;
+}
+
+.filter-group label {
+    font-weight: bold;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+}
+
+.btn-clear {
+    background: #6c757d;
+    border: none;
+    color: white;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-clear:hover {
+    background: #5a6268;
+}
+
+.sortable {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+}
+
+.sortable:hover {
+    background-color: #e9ecef;
+}
+
+.sortable::after {
+    content: ' ↕';
+    opacity: 0.5;
+    font-size: 0.8em;
+}
+
+.sortable.asc::after {
+    content: ' ↑';
+    opacity: 1;
+    color: #007bff;
+}
+
+.sortable.desc::after {
+    content: ' ↓';
+    opacity: 1;
+    color: #007bff;
+}
+
+.position-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+    color: white;
+}
+
+.position-keeper { 
+    background-color: #28a745; 
+}
+
+.position-defender { 
+    background-color: #007bff; 
+}
+
+.position-midfielder { 
+    background-color: #ffc107; 
+    color: #000; 
+}
+
+.position-attacker { 
+    background-color: #dc3545; 
+}
+
+.elo-high { 
+    font-weight: bold; 
+    color: #28a745; 
+}
+
+.elo-medium { 
+    color: #ffc107; 
+}
+
+.elo-low { 
+    color: #dc3545; 
+}
+
+.cost-high { 
+    font-weight: bold; 
+    color: #dc3545; 
+}
+
+.cost-medium { 
+    color: #ffc107; 
+}
+
+.cost-low { 
+    color: #28a745; 
+}
+
+.stats-summary {
+    background: #e9ecef;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .filter-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-group {
+        min-width: 100%;
+    }
+    
+    .table-container {
+        font-size: 0.9em;
+    }
+    
+    .position-badge {
+        font-size: 0.7em;
+        padding: 2px 6px;
+    }
+}
+
+/* Player name links */
+.player-link {
+    color: #212529 !important;
+    text-decoration: none !important;
+    transition: all 0.2s ease;
+}
+
+.player-link:hover {
+    color: #007bff !important;
+    text-decoration: none !important;
+}
+
+.player-link i {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.player-link:hover i {
+    opacity: 1;
+}
+
+@media (max-width: 576px) {
+    .filters {
+        padding: 10px;
+    }
+    
+    .filter-group {
+        margin-bottom: 10px;
+    }
+    
+    .table-container {
+        font-size: 0.8em;
+    }
+    
+    .stats-summary {
+        font-size: 0.9em;
+        padding: 8px;
+    }
+}
