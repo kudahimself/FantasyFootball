@@ -438,39 +438,44 @@ function addSelectedPlayerToSquad() {
 
 // Remove a player from the squad
 function removePlayerFromSquad(position, playerName) {
-    // No confirmation popup
-    console.log(`Removing ${playerName} from ${position}...`);
-    fetch('/api/remove-player/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
-        },
-        body: JSON.stringify({
-            position: position,
-            player_name: playerName
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            showStatusMessage(data.error, 'error');
-        } else {
-            // Optionally show a subtle info message, or comment out to show nothing
-            // showStatusMessage(data.message, 'info');
-            currentSquad = data.squad;
-            displayCurrentSquad();
+    console.log(`Removing ${playerName} from ${position} (local-only, mirror addPlayer)...`);
 
-            // Refresh the player selection pane if it exists
-            if (typeof refreshPlayerPane === 'function') {
-                refreshPlayerPane();
-            }
+    try {
+        // Ensure localTeam exists
+        if (!window.localTeam || !Array.isArray(window.localTeam)) {
+            window.localTeam = [];
         }
-    })
-    .catch(error => {
-        console.error('Error removing player:', error);
-        showStatusMessage('Error removing player. Please try again.', 'error');
-    });
+
+        // Find index by name (calls to this function pass name)
+        const idx = window.localTeam.findIndex(p => p.name === playerName || String(p.id) === String(playerName));
+        if (idx === -1) {
+            console.warn('Player not found in localTeam:', playerName);
+            alert(`${playerName} was not in your local team.`);
+            return;
+        }
+
+        const removed = window.localTeam.splice(idx, 1)[0];
+
+        // Use the same render flow as addPlayer
+        if (typeof updateSquadBadges === 'function') updateSquadBadges();
+        if (typeof updateSquadDisplay === 'function') updateSquadDisplay();
+        // Re-render dynamic players list if present
+        if (typeof renderPlayers === 'function') renderPlayers();
+        if (typeof refreshPlayerPane === 'function') refreshPlayerPane();
+
+        // Focus search input and scroll to player list for consistent UX
+        const searchInput = document.getElementById('player-search');
+        if (searchInput) searchInput.focus();
+        const playersList = document.getElementById('players-list');
+        if (playersList) playersList.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        // Show the same alert style as addPlayer
+        alert(`✅ Removed ${removed.name} from your team!`);
+        console.log(`✅ Locally removed ${removed.name}. localTeam size: ${window.localTeam.length}`);
+    } catch (err) {
+        console.error('Error in local removePlayerFromSquad:', err);
+        showStatusMessage('Error removing player locally. See console for details.', 'error');
+    }
 }
 
 // Show status messages
