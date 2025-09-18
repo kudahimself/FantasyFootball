@@ -1045,3 +1045,124 @@ def update_player_costs_from_fpl(request):
 
 
 # Removed ultra-optimized method - now using only the player-by-player approach
+
+
+@csrf_exempt
+def calculate_projected_points(request):
+    """
+    API endpoint to calculate projected points for all players' next 4 games.
+    Uses the same expected points formula as ELO calculator.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Only POST method allowed'})
+    
+    try:
+        import asyncio
+        from MyApi.utils.projected_points_calculator import calculate_all_projected_points
+        
+        # Always override existing projections to get fresh calculations
+        result = asyncio.run(calculate_all_projected_points(override_existing=True))
+        
+        if result.get('success'):
+            return JsonResponse({
+                'success': True,
+                'message': f"Successfully calculated projected points for {result['successful_players']} players",
+                'fixtures_created': result['fixtures_created'],
+                'total_projections': result['total_projections'],
+                'successful_players': result['successful_players'],
+                'failed_players': result['failed_players'],
+                'total_players': result['total_players']
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': result.get('error', 'Projected points calculation failed')
+            })
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Projected points calculation failed: {str(e)}'})
+
+
+@csrf_exempt
+def get_player_projected_points(request, player_name):
+    """
+    API endpoint to get projected points for a specific player.
+    """
+    try:
+        import asyncio
+        from MyApi.utils.projected_points_calculator import get_player_projected_summary
+        
+        # Get projected points summary
+        result = asyncio.run(get_player_projected_summary(player_name))
+        
+        if result.get('error'):
+            return JsonResponse({
+                'success': False,
+                'error': result['error']
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'player_name': result['player_name'],
+            'total_projected_points': result['total_projected_points'],
+            'games_projected': result['games_projected'],
+            'projections': result['projections']
+        })
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Failed to get projected points: {str(e)}'})
+
+
+@csrf_exempt
+def get_all_projected_points(request):
+    """
+    API endpoint to get projected points for all players (top performers).
+    """
+    try:
+        from MyApi.models import ProjectedPoints
+        from django.db.models import Sum
+        
+        # Get top players by total projected points for next 4 games
+        top_players = (
+            ProjectedPoints.objects
+            .values('player_name')
+            .annotate(total_projected=Sum('adjusted_expected_points'))
+            .order_by('-total_projected')[:50]  # Top 50 players
+        )
+        
+        results = []
+        for player_data in top_players:
+            player_name = player_data['player_name']
+            total_projected = player_data['total_projected']
+            
+            # Get individual game projections
+            projections = ProjectedPoints.objects.filter(
+                player_name=player_name
+            ).order_by('gameweek')[:4]
+            
+            projection_details = []
+            for proj in projections:
+                projection_details.append({
+                    'gameweek': proj.gameweek,
+                    'opponent': proj.opponent,
+                    'is_home': proj.is_home,
+                    'expected_points': proj.expected_points,
+                    'adjusted_points': proj.adjusted_expected_points,
+                    'difficulty': proj.difficulty_rating
+                })
+            
+            results.append({
+                'player_name': player_name,
+                'total_projected_points': round(total_projected, 2),
+                'games_projected': len(projection_details),
+                'projections': projection_details
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'total_players': len(results),
+            'players': results
+        })
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Failed to get all projected points: {str(e)}'})

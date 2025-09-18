@@ -24,6 +24,10 @@ urlpatterns = [
     path('api/gameweek_info/', views.get_current_gameweek_info, name='get_current_gameweek_info'),
     path('api/import_season/', views.import_season_gameweeks, name='import_season_gameweeks'),
     path('api/update_costs/', views.update_player_costs_from_fpl, name='update_player_costs_from_fpl'),
+    # Projected Points API endpoints
+    path('api/calculate_projected_points/', views.calculate_projected_points, name='calculate_projected_points'),
+    path('api/projected_points/<str:player_name>/', views.get_player_projected_points, name='get_player_projected_points'),
+    path('api/all_projected_points/', views.get_all_projected_points, name='get_all_projected_points'),
     # Removed old optimized methods - now using only the player-by-player approach
     path('api/system_info/', views.system_info, name='system_info'),
 ]

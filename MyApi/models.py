@@ -470,3 +470,89 @@ class SystemSettings(models.Model):
     def get_current_season(cls):
         """Get the current season."""
         return cls.get_settings().current_season
+
+
+class PlayerFixture(models.Model):
+    """
+    Model to store upcoming fixtures for players.
+    Used for projecting points for next 4 games.
+    """
+    player_name = models.CharField(max_length=200, db_index=True)
+    team = models.CharField(max_length=100)  # Player's team
+    gameweek = models.IntegerField(db_index=True)  # FPL gameweek number
+    opponent = models.CharField(max_length=100)  # Opposition team
+    is_home = models.BooleanField(default=True)  # True if playing at home
+    fixture_date = models.DateTimeField(null=True, blank=True)
+    competition = models.CharField(max_length=100, default='Premier League')
+    difficulty = models.IntegerField(default=3, help_text="FPL difficulty rating (1-5)")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'player_fixtures'
+        unique_together = ['player_name', 'gameweek', 'opponent']
+        indexes = [
+            models.Index(fields=['player_name', 'gameweek']),
+            models.Index(fields=['gameweek', 'team']),
+            models.Index(fields=['fixture_date']),
+        ]
+        ordering = ['gameweek', 'fixture_date']
+    
+    def __str__(self):
+        home_away = "vs" if self.is_home else "@"
+        return f"{self.player_name} ({self.team}) {home_away} {self.opponent} - GW{self.gameweek}"
+
+
+class ProjectedPoints(models.Model):
+    """
+    Model to store projected points for players for the next 4 games.
+    Uses the same expected points formula as ELO calculator.
+    """
+    player_name = models.CharField(max_length=200, db_index=True)
+    gameweek = models.IntegerField(db_index=True)
+    opponent = models.CharField(max_length=100)
+    is_home = models.BooleanField(default=True)
+    
+    # Current player stats
+    current_elo = models.FloatField(help_text="Player's current ELO rating")
+    current_cost = models.FloatField(help_text="Player's current cost")
+    
+    # Expected points calculation (same as ELO calculator)
+    competition = models.CharField(max_length=100, default='Premier League')
+    league_rating = models.IntegerField(help_text="Competition difficulty rating")
+    expected_points = models.FloatField(help_text="Expected points using ELO formula: k/(1 + 10**(League_Rating/current_elo))")
+    
+    # Opposition multiplier (for future enhancement)
+    opposition_strength = models.FloatField(default=1.0, help_text="Opposition strength multiplier (from FPL)")
+    difficulty_rating = models.IntegerField(default=3, help_text="FPL difficulty rating (1-5)")
+    adjusted_expected_points = models.FloatField(help_text="Expected points adjusted for opposition strength")
+    
+    # Calculation metadata
+    calculated_at = models.DateTimeField(auto_now_add=True)
+    k_factor = models.IntegerField(default=20, help_text="K-factor used in calculation")
+    
+    class Meta:
+        db_table = 'projected_points'
+        unique_together = ['player_name', 'gameweek', 'opponent']
+        indexes = [
+            models.Index(fields=['player_name', 'gameweek']),
+            models.Index(fields=['gameweek']),
+            models.Index(fields=['expected_points']),
+            models.Index(fields=['adjusted_expected_points']),
+        ]
+        ordering = ['gameweek', '-expected_points']
+    
+    def __str__(self):
+        return f"{self.player_name} vs {self.opponent} GW{self.gameweek}: {self.expected_points:.2f} pts"
+    
+    @classmethod
+    def get_next_4_games(cls, player_name):
+        """Get projected points for next 4 games for a specific player."""
+        return cls.objects.filter(player_name=player_name).order_by('gameweek')[:4]
+    
+    @classmethod
+    def get_total_projected_points(cls, player_name, games=4):
+        """Get total projected points for next N games."""
+        projections = cls.get_next_4_games(player_name)[:games]
+        return sum(proj.adjusted_expected_points for proj in projections)
