@@ -1582,3 +1582,35 @@ def test_simulate_substitutions(request):
             'success': False,
             'error': f'Test substitution simulation failed: {str(e)}'
         })
+
+
+@csrf_exempt
+def update_current_squad(request):
+    """
+    Replace the entire current squad with the provided squad data.
+    Expected POST data: {"squad": [ {"name": ..., "position": ...}, ... ] }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Only POST method allowed'}, status=405)
+    try:
+        data = json.loads(request.body)
+        local_team = data.get('squad')
+        # Accept both a flat list (legacy) and a grouped dict (new)
+        if isinstance(local_team, list):
+            # Use conversion utility to group
+            from MyApi.utils.squad_conversion import frontend_to_backend_squad
+            squad_dict = frontend_to_backend_squad(local_team)
+        elif isinstance(local_team, dict):
+            # Already grouped, validate keys
+            required_keys = {'goalkeepers', 'defenders', 'midfielders', 'forwards'}
+            if not required_keys.issubset(local_team.keys()):
+                return JsonResponse({'error': 'Grouped squad dict missing required keys.'}, status=400)
+            squad_dict = local_team
+        else:
+            return JsonResponse({'error': 'squad must be a list or grouped dict.'}, status=400)
+        current_squad_instance = CurrentSquad.get_or_create_current_squad()
+        current_squad_instance.squad = squad_dict
+        current_squad_instance.save()
+        return JsonResponse({'success': True, 'squad': current_squad_instance.squad})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

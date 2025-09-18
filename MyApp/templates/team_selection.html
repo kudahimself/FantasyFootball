@@ -112,6 +112,7 @@
         border-bottom: 1px solid #f1f1f1;
         cursor: pointer;
         transition: background-color 0.2s;
+        max-height: 80px;
     }
     
     .player-card:hover {
@@ -442,6 +443,9 @@
                 <button id="apply-changes-btn" class="btn btn-success" onclick="applyChangesToBackend()">
                     <i class="fas fa-save"></i> Apply Changes
                 </button>
+                <button id="discard-changes-btn" class="btn btn-secondary ms-2" onclick="discardLocalChanges()">
+                    <i class="fas fa-undo"></i> Discard Changes
+                </button>
             </div>
     <!-- All custom JS helpers and logic for localTeam and Apply Changes must be inside a script block -->
     <script>
@@ -505,44 +509,45 @@
 
     // Apply Changes button logic
     function applyChangesToBackend() {
-        const localIds = getPlayerIds(window.localTeam);
-        const backendIds = getPlayerIds(window.lastBackendSquad);
-        // Find players to add (in local, not in backend)
-        const toAdd = window.localTeam.filter(p => !backendIds.includes(p.id));
-        // Find players to remove (in backend, not in local)
-        const toRemove = window.lastBackendSquad.filter(p => !localIds.includes(p.id));
-        if (toAdd.length === 0 && toRemove.length === 0) {
-            alert('No changes to apply!');
+        // Save the entire localTeam as the new current squad, grouped by position with full player objects
+        if (!window.localTeam || window.localTeam.length === 0) {
+            alert('No players in your squad to save!');
             return;
         }
-        // Disable button while syncing
+        // Send the flat localTeam array; backend will group it
+        const squadToSend = window.localTeam.map(player => {
+            const playerObj = {};
+            ['id','name','position','team','cost','elo','elo_rating','projected_points'].forEach(k => {
+                if (player[k] !== undefined) playerObj[k] = player[k];
+            });
+            if (playerObj.elo_rating && !playerObj.elo) playerObj.elo = playerObj.elo_rating;
+            return playerObj;
+        });
         const btn = document.getElementById('apply-changes-btn');
         if (btn) btn.disabled = true;
-        let completed = 0;
-        let total = toAdd.length + toRemove.length;
-        let errors = [];
-        function done() {
-            completed++;
-            if (completed === total) {
-                if (btn) btn.disabled = false;
-                loadCurrentSquadFromDatabase();
-                if (errors.length) {
-                    alert('Some changes failed: ' + errors.join('; '));
-                } else {
-                    alert('✅ Changes applied!');
-                }
+        fetch('/api/update_current_squad/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+            },
+            body: JSON.stringify({ squad: squadToSend })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (btn) btn.disabled = false;
+            if (data.success) {
+                // Refresh the page after successful save
+                location.reload();
+            } else {
+                // Optionally show a non-intrusive error message
+                showStatusMessage('Error saving squad: ' + (data.error || 'Unknown error'), 'error');
             }
-        }
-        // Add players
-        toAdd.forEach(player => {
-            updateDatabaseSquad(player, 'add', done, err => { errors.push(err); done(); });
+        })
+        .catch(error => {
+            if (btn) btn.disabled = false;
+            showStatusMessage('Error saving squad: ' + (error.message || error), 'error');
         });
-        // Remove players
-        toRemove.forEach(player => {
-            updateDatabaseSquad(player, 'remove', done, err => { errors.push(err); done(); });
-        });
-        // If nothing to do, re-enable button
-        if (total === 0 && btn) btn.disabled = false;
     }
 
     // Patch updateDatabaseSquad to support callbacks
@@ -859,10 +864,12 @@
                         }
                         console.log(`✅ Added ${playerName} (${expectedPosition}) to local team`);
                     } else {
-                        console.warn(`⚠️ Player ${playerName} not found in available players data`);
+                        console.warn(`⚠️ Player ${playerName} not found in available players data, skipping.`);
                     }
                 });
             });
+            // Remove any undefined/null entries just in case
+            window.localTeam = window.localTeam.filter(Boolean);
             console.log(`📊 Loaded ${window.localTeam.length} players from current squad`);
             updateSquadBadges();
             updateSquadDisplay();

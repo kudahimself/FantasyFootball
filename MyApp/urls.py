@@ -39,4 +39,5 @@ urlpatterns = [
     path('api/test/recommend_substitutes/', views.test_recommend_substitutes, name='test_recommend_substitutes'),
     path('api/test/analyze_squad/', views.test_analyze_squad_weaknesses, name='test_analyze_squad_weaknesses'),
     path('api/test/simulate_substitutions/', views.test_simulate_substitutions, name='test_simulate_substitutions'),
+    path('api/update_current_squad/', views.update_current_squad, name='update_current_squad'),
 ]

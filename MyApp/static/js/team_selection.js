@@ -366,12 +366,26 @@ function addSelectedPlayerToSquad() {
         showStatusMessage('Please search and select a player first.', 'error');
         return;
     }
-    
+
+    // Count total players in the current squad
+    let totalPlayers = 0;
+    if (currentSquad && typeof currentSquad === 'object') {
+        ['goalkeepers', 'defenders', 'midfielders', 'forwards'].forEach(pos => {
+            if (Array.isArray(currentSquad[pos])) {
+                totalPlayers += currentSquad[pos].length;
+            }
+        });
+    }
+    if (totalPlayers >= 11) {
+        showStatusMessage('You cannot have more than 11 players in your squad.', 'error');
+        return;
+    }
+
     const playerName = selectedPlayer.name;
     const position = selectedPlayer.position;
-    
+
     console.log(`Adding ${playerName} (${position}) to squad...`);
-    
+
     fetch('/api/add-player/', {
         method: 'POST',
         headers: {
@@ -388,15 +402,16 @@ function addSelectedPlayerToSquad() {
         if (data.error) {
             showStatusMessage(data.error, 'error');
         } else {
-            showStatusMessage(data.message, 'success');
+            // Optionally show a subtle info message, or comment out to show nothing
+            // showStatusMessage(data.message, 'info');
             currentSquad = data.squad;
             displayCurrentSquad();
-            
+
             // Reset the search elements if they exist
             const searchInput = document.getElementById('player-search-input');
             const playerInfo = document.getElementById('player-info');
             const searchResults = document.getElementById('player-search-results');
-            
+
             if (searchInput) {
                 searchInput.value = '';
             }
@@ -406,9 +421,9 @@ function addSelectedPlayerToSquad() {
             if (searchResults) {
                 searchResults.style.display = 'none';
             }
-            
+
             selectedPlayer = null;
-            
+
             // Refresh the player selection pane if it exists
             if (typeof refreshPlayerPane === 'function') {
                 refreshPlayerPane();
@@ -423,12 +438,8 @@ function addSelectedPlayerToSquad() {
 
 // Remove a player from the squad
 function removePlayerFromSquad(position, playerName) {
-    if (!confirm(`Remove ${playerName} from ${position}?`)) {
-        return;
-    }
-    
+    // No confirmation popup
     console.log(`Removing ${playerName} from ${position}...`);
-    
     fetch('/api/remove-player/', {
         method: 'POST',
         headers: {
@@ -445,10 +456,11 @@ function removePlayerFromSquad(position, playerName) {
         if (data.error) {
             showStatusMessage(data.error, 'error');
         } else {
-            showStatusMessage(data.message, 'success');
+            // Optionally show a subtle info message, or comment out to show nothing
+            // showStatusMessage(data.message, 'info');
             currentSquad = data.squad;
             displayCurrentSquad();
-            
+
             // Refresh the player selection pane if it exists
             if (typeof refreshPlayerPane === 'function') {
                 refreshPlayerPane();
