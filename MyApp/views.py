@@ -31,13 +31,6 @@ def team_selection(request):
     """
     return render(request, 'team_selection.html')
 
-def data(request):
-    """
-    Redirect to Data Manager - consolidating player management functionality.
-    """
-    from django.shortcuts import redirect
-    return redirect('data_manager')
-
 def squads(request):
     squad_numbers = range(1, 5) 
     context = {
@@ -231,6 +224,9 @@ def get_current_squad(request):
     A Django view that returns the current squad from the database as JSON.
     """
     current_squad_instance = CurrentSquad.get_or_create_current_squad()
+    
+    # Refresh squad data to ensure it has full player information
+    current_squad_instance.refresh_squad_data()
     
     return JsonResponse({'current_squad': current_squad_instance.squad})
 

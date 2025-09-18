@@ -29,14 +29,7 @@
     }
 </style>
 
-<!-- Second navigation bar: Refresh squad -->
-<nav class="navbar navbar-expand-lg navbar-light bg-light squad-nav">
-    <div class="btn-toolbar w-100" role="toolbar" aria-label="Squad management toolbar">
-        <div class="btn-group" role="group" aria-label="Squad actions">
-            <button id="btn-refresh-squad" type="button" class="btn btn-success" onclick="loadCurrentSquad()">Refresh Squad</button>
-        </div>
-    </div>
-</nav>
+
 
 
 <!-- Add Player Form -->
@@ -54,6 +47,7 @@
         </select>
         <button onclick="addSelectedPlayerToSquad()" style="padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 3px;">Add Player</button>
         <button onclick="loadAllPlayers()" style="padding: 8px 15px; background: #17a2b8; color: white; border: none; border-radius: 3px;">Refresh Players</button>
+        <button id="btn-refresh-squad" onclick="loadCurrentSquad()" style="padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 3px;">Refresh Squad</button>
     </div>
     <div id="player-info" style="margin-top: 10px; font-size: 14px; color: #666;">
         <!-- Player info will be displayed here -->
@@ -62,7 +56,20 @@
 
 <!-- Squad Display -->
 <div id="current-squad">
-    <h2>Team Selection</h2>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Team Selection</h2>
+        <div class="d-flex" style="gap: 12px;">
+            <div class="badge bg-primary p-2" style="font-size: 0.9em;">
+                <i class="fas fa-chart-line"></i> Team Elo: <span id="team-elo">--</span>
+            </div>
+            <div class="badge bg-success p-2" style="font-size: 0.9em;">
+                <i class="fas fa-pound-sign"></i> Total Cost: £<span id="team-cost">--</span>m
+            </div>
+            <button class="btn btn-sm btn-info" onclick="directCalculation()" title="Refresh totals">
+                <i class="fas fa-calculator"></i>
+            </button>
+        </div>
+    </div>
     <div id="squad-content">
         <!-- Squad content will be loaded here -->
     </div>
@@ -72,5 +79,42 @@
 <div id="status-message" style="margin: 20px 0; padding: 10px; border-radius: 3px; display: none;"></div>
 
 <script src="{% static 'js/team_selection.js' %}"></script>
+
+<script>
+// Direct calculation function as backup
+function directCalculation() {
+    console.log('Running direct calculation...');
+    
+    fetch('/api/current_squad/')
+        .then(response => response.json())
+        .then(data => {
+            const squad = data.current_squad;
+            let totalElo = 0, totalCost = 0, playerCount = 0;
+            
+            ['goalkeepers', 'defenders', 'midfielders', 'forwards'].forEach(position => {
+                if (squad[position]) {
+                    squad[position].forEach(player => {
+                        if (player && player.elo !== undefined && player.cost !== undefined) {
+                            totalElo += parseFloat(player.elo);
+                            totalCost += parseFloat(player.cost);
+                            playerCount++;
+                        }
+                    });
+                }
+            });
+            
+            const avgElo = playerCount > 0 ? totalElo / playerCount : 0;
+            
+            document.getElementById('team-elo').textContent = playerCount > 0 ? avgElo.toFixed(1) : '--';
+            document.getElementById('team-cost').textContent = playerCount > 0 ? totalCost.toFixed(1) : '--';
+            
+            console.log(`Direct calc: ${playerCount} players, Avg Elo: ${avgElo.toFixed(1)}, Total Cost: £${totalCost.toFixed(1)}m`);
+        })
+        .catch(error => console.error('Direct calc error:', error));
+}
+
+// Run direct calculation after page loads
+setTimeout(directCalculation, 1000);
+</script>
 
 {% endblock %}

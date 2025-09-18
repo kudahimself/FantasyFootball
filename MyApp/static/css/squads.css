@@ -132,15 +132,6 @@
     margin-bottom: 20px;
 }
 
-#squad-select {
-    display: block;
-    margin: 0 auto 20px;
-    padding: 8px 12px;
-    border-radius: 5px;
-    border: 1px solid #ddd;
-    background: #fff;
-}
-
 /* Button styling */
 button {
     background: #007bff;

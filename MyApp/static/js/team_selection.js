@@ -1,4 +1,5 @@
 // Team Selection JavaScript for managing current squad
+console.log("team_selection.js loaded successfully");
 
 let currentSquad = {};
 let allPlayers = {};
@@ -92,6 +93,7 @@ function loadCurrentSquad() {
 
 // Display the current squad using the formation layout
 function displayCurrentSquad() {
+    console.log('displayCurrentSquad called, currentSquad:', currentSquad);
     const squadContent = document.getElementById("squad-content");
     
     if (Object.keys(currentSquad).length === 0) {
@@ -108,6 +110,64 @@ function displayCurrentSquad() {
     ];
     
     generateFormationGrid(positions, currentSquad, squadContent);
+    
+    // Calculate and update team totals
+    updateTeamTotals();
+}
+
+// Calculate and display team totals (Elo and Cost)
+function updateTeamTotals() {
+    console.log('updateTeamTotals called');
+    
+    // Debug: Check if currentSquad is populated
+    if (!currentSquad || Object.keys(currentSquad).length === 0) {
+        console.log('No squad data available for calculation');
+        return;
+    }
+    
+    // Check if DOM elements exist
+    const teamEloElement = document.getElementById('team-elo');
+    const teamCostElement = document.getElementById('team-cost');
+    
+    if (!teamEloElement || !teamCostElement) {
+        console.log('DOM elements not found:', {
+            teamElo: !!teamEloElement,
+            teamCost: !!teamCostElement
+        });
+        // Retry in 100ms if elements not found
+        setTimeout(updateTeamTotals, 100);
+        return;
+    }
+    
+    let totalElo = 0;
+    let totalCost = 0;
+    let playerCount = 0;
+    
+    // Calculate totals from all positions
+    const positions = ['goalkeepers', 'defenders', 'midfielders', 'forwards'];
+    
+    positions.forEach(position => {
+        if (currentSquad[position]) {
+            currentSquad[position].forEach(player => {
+                if (player && player.elo !== undefined && player.cost !== undefined) {
+                    totalElo += parseFloat(player.elo);
+                    totalCost += parseFloat(player.cost);
+                    playerCount++;
+                }
+            });
+        }
+    });
+    
+    // Calculate average Elo (more meaningful than total Elo)
+    const avgElo = playerCount > 0 ? totalElo / playerCount : 0;
+    
+    console.log(`Updating totals: ${playerCount} players, Avg Elo: ${avgElo.toFixed(1)}, Total Cost: £${totalCost.toFixed(1)}m`);
+    
+    // Update display
+    teamEloElement.textContent = playerCount > 0 ? avgElo.toFixed(1) : '--';
+    teamCostElement.textContent = playerCount > 0 ? totalCost.toFixed(1) : '--';
+    
+    console.log('Display updated successfully');
 }
 
 // Generate formation grid (reused from squads.js but adapted for current squad)
@@ -233,11 +293,6 @@ function addSelectedPlayerToSquad() {
     });
 }
 
-// Add a player to the squad (legacy function - keeping for compatibility)
-function addPlayerToSquad() {
-    addSelectedPlayerToSquad();
-}
-
 // Remove a player from the squad
 function removePlayerFromSquad(position, playerName) {
     if (!confirm(`Remove ${playerName} from ${position}?`)) {
@@ -315,6 +370,16 @@ function getCsrfToken() {
 
 // Load squad and players when page loads
 window.onload = function() {
+    console.log('Page loaded, initializing...');
     loadCurrentSquad();
     loadAllPlayers();
 };
+
+// Also try with DOMContentLoaded as backup
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing...');
+    setTimeout(function() {
+        loadCurrentSquad();
+        loadAllPlayers();
+    }, 500); // Small delay to ensure elements are ready
+});

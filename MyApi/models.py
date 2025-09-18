@@ -233,7 +233,7 @@ class CurrentSquad(models.Model):
     
     def add_player(self, position, player_name):
         """
-        Add a player to a specific position.
+        Add a player to a specific position with full data (name, elo, cost, team).
         
         Args:
             position (str): One of 'goalkeepers', 'defenders', 'midfielders', 'forwards'
@@ -247,8 +247,31 @@ class CurrentSquad(models.Model):
         if position not in valid_positions:
             return False
         
+        # Get player data from the Player model (current week)
+        from MyApi.models import SystemSettings
+        settings = SystemSettings.get_settings()
+        current_week = settings.current_gameweek
+        
+        player_data = {"name": player_name}
+        
+        try:
+            player = Player.objects.filter(name=player_name, week=current_week).first()
+            if not player:
+                # Fallback to any week if current week not found
+                player = Player.objects.filter(name=player_name).order_by('-week').first()
+            
+            if player:
+                player_data.update({
+                    "elo": float(player.elo),
+                    "cost": float(player.cost),
+                    "team": player.team or "",
+                    "position": player.position
+                })
+        except Exception as e:
+            print(f"Error fetching player data for {player_name}: {e}")
+        
         current_squad = self.squad
-        current_squad[position].append({"name": player_name})
+        current_squad[position].append(player_data)
         self.squad = current_squad
         self.save()
         return True
@@ -332,6 +355,47 @@ class CurrentSquad(models.Model):
         self.squad = current_squad
         self.save()
         return True
+    
+    def refresh_squad_data(self):
+        """
+        Refresh existing squad data to include full player information (elo, cost, team).
+        This is useful for updating squads that only have player names.
+        """
+        from MyApi.models import SystemSettings
+        settings = SystemSettings.get_settings()
+        current_week = settings.current_gameweek
+        
+        current_squad = self.squad
+        
+        for position in ['goalkeepers', 'defenders', 'midfielders', 'forwards']:
+            if position in current_squad:
+                for i, player_data in enumerate(current_squad[position]):
+                    if isinstance(player_data, dict) and 'name' in player_data:
+                        player_name = player_data['name']
+                        
+                        # Skip if already has elo and cost data
+                        if 'elo' in player_data and 'cost' in player_data:
+                            continue
+                        
+                        # Fetch full player data
+                        try:
+                            player = Player.objects.filter(name=player_name, week=current_week).first()
+                            if not player:
+                                player = Player.objects.filter(name=player_name).order_by('-week').first()
+                            
+                            if player:
+                                current_squad[position][i] = {
+                                    "name": player_name,
+                                    "elo": float(player.elo),
+                                    "cost": float(player.cost),
+                                    "team": player.team or "",
+                                    "position": player.position
+                                }
+                        except Exception as e:
+                            print(f"Error refreshing data for {player_name}: {e}")
+        
+        self.squad = current_squad
+        self.save()
     
     @classmethod
     def get_or_create_current_squad(cls):
