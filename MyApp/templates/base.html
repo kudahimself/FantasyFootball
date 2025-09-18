@@ -21,8 +21,13 @@
           <li class="nav-item{% if request.resolver_match.url_name == 'home' %} active{% endif %}">
             <a class="nav-link" href="{% url 'home' %}">Home</a>
           </li>
-          <li class="nav-item{% if request.resolver_match.url_name == 'fantasy_data' %} active{% endif %}">
-            <a class="nav-link" href="{% url 'fantasy_data' %}">Fantasy Data</a>
+          <li class="nav-item{% if request.resolver_match.url_name == 'team_selection' %} active{% endif %}">
+            <a class="nav-link" href="{% url 'team_selection' %}">Team Selection</a>
+          </li>
+          <li class="nav-item{% if request.resolver_match.url_name == 'data' %} active{% endif %}">
+            <a class="nav-link" href="{% url 'data' %}">
+              <i class="fas fa-database"></i> Manage Players
+            </a>
           </li>
           <li class="nav-item{% if request.resolver_match.url_name == 'squads' %} active{% endif %}">
             <a class="nav-link" href="{% url 'squads' %}">Squads</a>

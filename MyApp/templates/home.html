@@ -86,14 +86,14 @@
 
         <!-- Navigation to Management -->
         <div style="text-align: center; margin: 20px 0;">
-            <a href="{% url 'fantasy_data' %}" class="btn btn-primary" style="margin: 5px;">Manage Squad</a>
+            <a href="{% url 'team_selection' %}" class="btn btn-primary" style="margin: 5px;">Manage Squad</a>
             <a href="{% url 'squads' %}" class="btn btn-secondary" style="margin: 5px;">Generate New Squads</a>
         </div>
     {% else %}
         <div style="text-align: center; padding: 40px;">
             <h3>No Squad Available</h3>
             <p>You haven't created a squad yet.</p>
-            <a href="{% url 'fantasy_data' %}" class="btn btn-primary">Create Your Squad</a>
+            <a href="{% url 'team_selection' %}" class="btn btn-primary">Create Your Squad</a>
         </div>
     {% endif %}
 </div>

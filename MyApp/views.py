@@ -25,8 +25,17 @@ def home(request):
     }
     return render(request, 'home.html', context)
 
-def fantasy_data(request):
-    return render(request, 'fantasy_data.html')
+def team_selection(request):
+    """
+    Team Selection page for building and managing fantasy squads.
+    """
+    return render(request, 'team_selection.html')
+
+def data(request):
+    """
+    Data management page for FPL position updates and Elo recalculations.
+    """
+    return render(request, 'data.html')
 
 def squads(request):
     squad_numbers = range(1, 5) 
@@ -659,3 +668,265 @@ def full_refresh(request):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+
+@csrf_exempt
+def update_player_positions_from_fpl(request):
+    """
+    Fetch player positions and teams from FPL API and update database.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Only POST method allowed'})
+    
+    try:
+        import asyncio
+        from MyApi.models import Player, SystemSettings
+        
+        # Get the current week from settings
+        try:
+            settings = SystemSettings.objects.first()
+            current_week = settings.current_gameweek if settings else 4
+        except:
+            current_week = 4
+        
+        async def fetch_and_update_positions():
+            """
+            Async function to fetch FPL data and update positions and teams.
+            """
+            import aiohttp
+            from fpl import FPL
+            from asgiref.sync import sync_to_async
+            
+            async with aiohttp.ClientSession() as session:
+                fpl = FPL(session)
+                
+                try:
+                    # Get all FPL players and teams
+                    players = await fpl.get_players()
+                    teams = await fpl.get_teams()
+                    
+                    # Create team mapping
+                    team_map = {team.id: team.name for team in teams}
+                    
+                    updated_count = 0
+                    team_updated_count = 0
+                    errors = []
+                    position_changes = []
+                    team_changes = []
+                    
+                    position_map = {
+                        1: 'Keeper',      # Goalkeeper
+                        2: 'Defender',    # Defender
+                        3: 'Midfielder',  # Midfielder
+                        4: 'Attacker',    # Forward
+                    }
+                    
+                    for fpl_player in players:
+                        try:
+                            # Clean player name to match our database format
+                            player_name = f"{fpl_player.first_name} {fpl_player.second_name}"
+                            player_name_clean = player_name.replace(' ', '_')
+                            
+                            # Get FPL position and team
+                            fpl_position = position_map.get(fpl_player.element_type, 'Midfielder')
+                            fpl_team = team_map.get(fpl_player.team, 'Unknown')
+                            
+                            # Try to find player in our database (try both formats)
+                            player_obj = None
+                            for name_variant in [player_name, player_name_clean, player_name.replace('_', ' ')]:
+                                try:
+                                    player_obj = await sync_to_async(Player.objects.filter(
+                                        name=name_variant, 
+                                        week=current_week
+                                    ).first)()
+                                    if player_obj:
+                                        break
+                                except:
+                                    continue
+                            
+                            if player_obj:
+                                updated = False
+                                
+                                # Check if position needs updating
+                                if player_obj.position != fpl_position:
+                                    old_position = player_obj.position
+                                    player_obj.position = fpl_position
+                                    updated = True
+                                    
+                                    position_changes.append({
+                                        'name': player_obj.name,
+                                        'old_position': old_position,
+                                        'new_position': fpl_position
+                                    })
+                                    updated_count += 1
+                                
+                                # Check if team needs updating
+                                if player_obj.team != fpl_team:
+                                    old_team = player_obj.team
+                                    player_obj.team = fpl_team
+                                    updated = True
+                                    
+                                    team_changes.append({
+                                        'name': player_obj.name,
+                                        'old_team': old_team,
+                                        'new_team': fpl_team
+                                    })
+                                    team_updated_count += 1
+                                
+                                if updated:
+                                    await sync_to_async(player_obj.save)()
+                            
+                        except Exception as e:
+                            errors.append(f"Error updating {player_name}: {str(e)}")
+                            continue
+                    
+                    return {
+                        'updated_count': updated_count,
+                        'team_updated_count': team_updated_count,
+                        'position_changes': position_changes,
+                        'team_changes': team_changes[:20],  # Limit to first 20
+                        'errors': errors[:10]  # Limit errors to first 10
+                    }
+                    
+                except Exception as e:
+                    return {'error': f"FPL API error: {str(e)}"}
+        
+        # Run the async function
+        result = asyncio.run(fetch_and_update_positions())
+        
+        if 'error' in result:
+            return JsonResponse({'success': False, 'error': result['error']})
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Updated positions for {result["updated_count"]} players and teams for {result["team_updated_count"]} players',
+            'updated_count': result['updated_count'],
+            'team_updated_count': result['team_updated_count'],
+            'position_changes': result['position_changes'],
+            'team_changes': result['team_changes'],
+            'errors': result['errors']
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+# Removed old batch-based and optimized methods
+# Now using only the player-by-player approach with accurate counting and progress tracking
+
+
+@csrf_exempt
+def recalculate_player_elos(request):
+    """
+    Player-by-player Elo recalculation using the exact same method as elo_model.py
+    Clear progress tracking and accurate player counting.
+    
+    Uses the utility function from MyApi.utils.elo_calculator for consistency.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Only POST method allowed'})
+    
+    try:
+        import asyncio
+        from MyApi.utils.elo_calculator import player_by_player_elo_calculation
+        
+        # Run the player-by-player calculation
+        result = asyncio.run(player_by_player_elo_calculation(show_progress=False))
+        
+        if 'success' in result and result['success']:
+            return JsonResponse({
+                'success': True,
+                'message': f"Successfully recalculated Elo ratings for {result['successful_players']} players (Week {result['week']})",
+                'updated_count': result['successful_players'],
+                'total_players': result['total_players'],
+                'failed_count': result['failed_players'],
+                'duration': f"{result['duration']:.2f} seconds",
+                'processing_rate': f"{result['processing_rate']:.2f} players/second",
+                'week': result['week'],
+                'method': 'player_by_player'
+            })
+        else:
+            return JsonResponse({
+                'success': False, 
+                'error': result.get('error', 'Player-by-player calculation failed')
+            })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Elo calculation failed: {str(e)}'})
+
+
+@csrf_exempt
+def system_info(request):
+    """
+    API endpoint to get current system information for the data page.
+    """
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'error': 'Only GET method allowed'})
+    
+    try:
+        from MyApi.models import SystemSettings, Player
+        
+        # Get system settings
+        settings = SystemSettings.get_settings()
+        
+        # Get player count for current week
+        current_week = settings.current_gameweek
+        total_players = Player.objects.filter(week=current_week).count()
+        
+        # Format last update time
+        last_update = 'Never'
+        if settings.last_data_update:
+            last_update = settings.last_data_update.strftime('%Y-%m-%d %H:%M')
+        
+        return JsonResponse({
+            'success': True,
+            'current_gameweek': settings.current_gameweek,
+            'current_season': settings.current_season,
+            'total_players': total_players,
+            'last_update': last_update
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@csrf_exempt
+def update_player_costs_from_fpl(request):
+    """
+    Update all player costs from FPL API without affecting Elo ratings.
+    Uses the separate fpl_cost_updater utility module.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Only POST method allowed'})
+    
+    try:
+        import asyncio
+        from MyApi.utils.fpl_cost_updater import update_all_player_costs_from_fpl
+        
+        # Run the cost update
+        result = asyncio.run(update_all_player_costs_from_fpl(show_progress=False))
+        
+        if result.get('success'):
+            return JsonResponse({
+                'success': True,
+                'message': f"Successfully updated costs for {result['players_updated']} players (Week {result['week']})",
+                'total_players': result['total_players'],
+                'players_updated': result['players_updated'],
+                'successful_updates': result['successful_updates'],
+                'failed_updates': result['failed_updates'],
+                'duration': f"{result['duration']:.2f} seconds",
+                'processing_rate': f"{result['processing_rate']:.2f} players/second",
+                'week': result['week'],
+                'significant_changes': len([c for c in result['cost_changes'] if abs(c['change']) > 0.5])
+            })
+        else:
+            return JsonResponse({
+                'success': False, 
+                'error': result.get('error', 'Cost update failed')
+            })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Cost update failed: {str(e)}'})
+
+
+# Removed ultra-optimized method - now using only the player-by-player approach

@@ -20,6 +20,7 @@ class PlayerMatch(models.Model):
     goals = models.IntegerField(default=0)
     assists = models.IntegerField(default=0)
     points = models.IntegerField(default=0)  # Fantasy points
+    elo_before_match = models.FloatField(default=1200.0, help_text="Elo rating before this match")
     elo_after_match = models.FloatField(help_text="Elo rating after this match")
     
     # Additional fields that might be useful

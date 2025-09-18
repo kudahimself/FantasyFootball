@@ -1,4 +1,4 @@
-// Fantasy Data JavaScript for managing current squad
+// Team Selection JavaScript for managing current squad
 
 let currentSquad = {};
 let allPlayers = {};

@@ -135,7 +135,8 @@ class WeeklyDataProcessorDB:
         for player_name, player_data in self.players_data.items():
             try:
                 # Check if player exists in our historical data
-                if not PlayerMatch.objects.filter(player_name=player_name).exists():
+                player_match_exists = await sync_to_async(PlayerMatch.objects.filter(player_name=player_name).exists)()
+                if not player_match_exists:
                     print(f"No historical data for {player_name}, skipping Elo update")
                     continue
                 
@@ -279,7 +280,7 @@ class WeeklyDataProcessorDB:
             return False
         
         # Update Elo ratings
-        updated_count = self.update_player_elos_from_gameweek(week, season)
+        updated_count = await self.update_player_elos_from_gameweek(week, season)
         
         print(f"Weekly data processing complete. Updated {updated_count} players.")
         return True
