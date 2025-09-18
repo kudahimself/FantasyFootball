@@ -4,7 +4,6 @@ console.log("team_selection.js loaded successfully");
 let currentSquad = {};
 let allPlayers = {};
 let allPlayersFlat = []; // Flat array for search
-let selectedPlayer = null; // Currently selected player for adding
 
 // Load all available players from the server
 function loadAllPlayers() {
