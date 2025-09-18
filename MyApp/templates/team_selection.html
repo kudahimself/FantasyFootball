@@ -694,68 +694,23 @@
         const squadContent = document.getElementById('squad-content');
         if (!squadContent) return;
         const team = window.localTeam || [];
+        // Show a flat list of players (no grouping)
+        let squadHTML = `<div class="squad-formation">`;
+        squadHTML += `<div class="text-center mb-3"><small class="text-muted">${team.length}/11 players selected</small></div>`;
         if (team.length === 0) {
-            squadContent.innerHTML = `
-                <div class="text-center py-4">
-                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">No players selected yet. Click "+ Add" on any player to start building your team.</p>
-                </div>
-            `;
-            return;
-        }
-            // Group players by position
-            const positions = {
-                'GKP': team.filter(p => p.position === 'GKP'),
-                'DEF': team.filter(p => p.position === 'DEF'),
-                'MID': team.filter(p => p.position === 'MID'),
-                'FWD': team.filter(p => p.position === 'FWD')
-            };
-            let squadHTML = `
-                <div class="squad-formation">
-                    <div class="text-center mb-3">
-                        <small class="text-muted">${team.length}/11 players selected</small>
-                    </div>
-            `;
-            Object.keys(positions).forEach(position => {
-                const players = positions[position];
-                const positionColors = {
-                    'GKP': 'bg-warning text-dark',
-                    'DEF': 'bg-primary',
-                    'MID': 'bg-success',
-                    'FWD': 'bg-danger'
-                };
-                if (players.length > 0) {
-                    squadHTML += `
-                        <div class="position-group mb-3">
-                            <div class="position-label ${positionColors[position]} px-2 py-1 rounded mb-2">
-                                ${position} (${players.length})
-                            </div>
-                            <div class="players-in-position">
-                    `;
-                    players.forEach(player => {
-                        squadHTML += `
-                            <div class="selected-player-card">
-                                <div class="player-info">
-                                    <strong>${player.name}</strong>
-                                    <div class="small text-muted">${player.team}</div>
-                                </div>
-                                <div class="player-stats">
-                                    <div class="small">£${player.cost}m</div>
-                                    <div class="small">⭐${player.projected_points || 0}</div>
-                                </div>
-                                <button class="btn btn-sm btn-outline-danger" onclick="removePlayer('${player.id}', '${player.name}')" title="Remove player">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        `;
-                    });
-                    squadHTML += `
-                            </div>
-                        </div>
-                    `;
-                }
+            squadHTML += `<div class="text-center py-4"><i class="fas fa-users fa-3x text-muted mb-3"></i><p class="text-muted">No players selected yet. Click "+ Add" on any player to start building your team.</p></div>`;
+        } else {
+            squadHTML += `<div class="players-in-position">`;
+            team.forEach(player => {
+                squadHTML += `<div class="selected-player-card">`;
+                squadHTML += `<div class="player-info"><strong>${player.name}</strong><div class="small text-muted">${player.team}</div></div>`;
+                squadHTML += `<div class="player-stats"><div class="small">£${player.cost}m</div><div class="small">⭐${player.projected_points || 0}</div></div>`;
+                squadHTML += `<button class="btn btn-sm btn-outline-danger" onclick="removePlayer('${player.id}', '${player.name}')" title="Remove player"><i class="fas fa-times"></i></button>`;
+                squadHTML += `</div>`;
             });
             squadHTML += `</div>`;
+        }
+        squadHTML += `</div>`;
         squadContent.innerHTML = squadHTML;
     }
 
@@ -850,7 +805,8 @@ function addPlayer(playerId, playerName) {
     
     // Initialize when page loads
     document.addEventListener('DOMContentLoaded', function() {
-    loadCurrentSquadFromDatabase();
+        loadCurrentSquadFromDatabase();
+        setTimeout(updateSquadDisplay, 0);
     });
     
     // Load current squad from database (loads into localTeam)

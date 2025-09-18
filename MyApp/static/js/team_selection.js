@@ -238,92 +238,117 @@ function loadCurrentSquad() {
 function displayCurrentSquad() {
     console.log('displayCurrentSquad called, currentSquad:', currentSquad);
     const squadContent = document.getElementById("squad-content");
-    
     if (Object.keys(currentSquad).length === 0) {
         squadContent.innerHTML = `<p>No squad data available.</p>`;
         return;
     }
-    
-    // Use formation structure: [goalkeepers, defenders, midfielders, forwards]
-    const positions = [
-        currentSquad.goalkeepers?.length || 0,
-        currentSquad.defenders?.length || 0,
-        currentSquad.midfielders?.length || 0,
-        currentSquad.forwards?.length || 0
-    ];
-    
-    generateFormationGrid(positions, currentSquad, squadContent);
-    // No more team totals calculation here; handled by updateSquadBadges in template
-}
 
-// Generate formation grid (reused from squads.js but adapted for current squad)
-function generateFormationGrid(positions, data, targetElement) {
-    // Clear previous content
-    targetElement.innerHTML = ''; 
-
-    const goalkeepers = positions[0];
-    const defenders = positions[1];
-    const midfielders = positions[2];
-    const forwards = positions[3];
-
-    const rows = [
-        { label: 'GK', count: goalkeepers, players: data?.goalkeepers },
-        { label: 'DEF', count: defenders, players: data?.defenders },
-        { label: 'MID', count: midfielders, players: data?.midfielders },
-        { label: 'FWD', count: forwards, players: data?.forwards }
+    // Define the order and display names for positions
+    const positionOrder = [
+        { key: 'goalkeepers', label: 'GK' },
+        { key: 'defenders', label: 'DEF' },
+        { key: 'midfielders', label: 'MID' },
+        { key: 'forwards', label: 'FWD' }
     ];
 
-    // Create the main formation div
-    const formation = document.createElement('div');
-    formation.id = 'formation';
+    squadContent.innerHTML = '';
 
-    for (let row of rows) {
-        if (row.count > 0) {
-            const rowContainer = document.createElement('div');
-            rowContainer.classList.add('formation-row');
+    // Flatten squad to a single array for display
+    const flatSquad = [];
+        positionOrder.forEach(pos => {
+            const players = currentSquad[pos.key] || [];
+            // Add heading for the position
+            const heading = document.createElement('div');
+            heading.textContent = pos.label;
+            heading.className = 'position-header';
+            squadContent.appendChild(heading);
 
-            for (let i = 0; i < row.count; i++) {
-                // Create player container
-                const playerContainer = document.createElement('div');
-                playerContainer.classList.add('player-container');
-                
-                // Create player circle
-                const playerCircle = document.createElement('div');
-                playerCircle.classList.add('player-circle');
-                playerCircle.textContent = row.label;
-                
-                // Create player name label with remove button
-                const playerName = document.createElement('div');
-                playerName.classList.add('player-name');
-                
-                if (row.players && row.players[i]) {
-                    const playerNameText = document.createElement('span');
-                    playerNameText.textContent = row.players[i].name;
-                    
+            if (players.length === 0) {
+                const empty = document.createElement('div');
+                empty.textContent = `No ${pos.label}`;
+                empty.style.color = '#888';
+                empty.style.padding = '8px 20px';
+                squadContent.appendChild(empty);
+            } else {
+                players.forEach(player => {
+                    // Use the same HTML structure as the player selection pane
+                    const card = document.createElement('div');
+                    card.className = 'player-card';
+                    card.setAttribute('data-name', (player.name || '').toLowerCase());
+                    card.setAttribute('data-team', (player.team || '').toLowerCase());
+                    card.setAttribute('data-position', pos.label);
+
+                    // .player-info
+                    const info = document.createElement('div');
+                    info.className = 'player-info';
+
+                    // .player-name
+                    const name = document.createElement('div');
+                    name.className = 'player-name';
+                    name.textContent = player.name + ' ';
+                    // Add badge for position (match template logic)
+                    const badge = document.createElement('span');
+                    badge.className = 'badge ms-2';
+                    if (pos.label === 'GK') badge.classList.add('bg-warning', 'text-dark');
+                    if (pos.label === 'DEF') badge.classList.add('bg-primary');
+                    if (pos.label === 'MID') badge.classList.add('bg-success');
+                    if (pos.label === 'FWD') badge.classList.add('bg-danger');
+                    badge.textContent = pos.label;
+                    name.appendChild(badge);
+                    info.appendChild(name);
+
+                    // .player-team
+                    const team = document.createElement('div');
+                    team.className = 'player-team';
+                    team.textContent = '\ud83d\udccd ' + (player.team || '');
+                    info.appendChild(team);
+
+                    card.appendChild(info);
+
+                    // .player-stats
+                    const stats = document.createElement('div');
+                    stats.className = 'player-stats';
+
+                    // .player-price
+                    const price = document.createElement('div');
+                    price.className = 'player-price';
+                    price.textContent = player.cost !== undefined ? `£${player.cost}m` : '';
+                    stats.appendChild(price);
+
+                    // .player-points (ELO)
+                    const points = document.createElement('div');
+                    points.className = 'player-points';
+                    points.textContent = player.elo !== undefined ? `📊 ${player.elo_rating !== undefined ? player.elo_rating : player.elo.toFixed(1)}` : '';
+                    stats.appendChild(points);
+
+                    // .player-projected (projected points)
+                    const proj = document.createElement('div');
+                    proj.className = 'player-projected';
+                    if (player.projected_points !== undefined) {
+                        proj.textContent = `⭐ ${player.projected_points}pts`;
+                    } else {
+                        proj.textContent = '';
+                    }
+                    stats.appendChild(proj);
+
+                    card.appendChild(stats);
+
+                    // Remove button (styled like add-btn)
                     const removeButton = document.createElement('button');
                     removeButton.textContent = '×';
-                    removeButton.style.cssText = 'margin-left: 5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; cursor: pointer;';
-                    removeButton.onclick = () => removePlayerFromSquad(getPositionKey(row.label), row.players[i].name);
-                    
-                    playerName.appendChild(playerNameText);
-                    playerName.appendChild(removeButton);
-                } else {
-                    playerName.textContent = `Empty ${row.label}`;
-                }
-                
-                // Append circle and name to container
-                playerContainer.appendChild(playerCircle);
-                playerContainer.appendChild(playerName);
-                
-                // Append container to row
-                rowContainer.appendChild(playerContainer);
+                    removeButton.className = 'add-btn';
+                    removeButton.onclick = () => removePlayerFromSquad(pos.key, player.name);
+                    card.appendChild(removeButton);
+
+                    squadContent.appendChild(card);
+                });
             }
-            formation.appendChild(rowContainer);
-        }
-    }
-    // Append the whole formation to the target element
-    targetElement.appendChild(formation);
+        });
 }
+// Generate formation grid (reused from squads.js but adapted for current squad)
+
+// Generate formation grid (reused from squads.js but adapted for current squad)
+
 
 // Helper function to convert label to position key
 function getPositionKey(label) {
