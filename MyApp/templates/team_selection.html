@@ -1032,13 +1032,15 @@ function addPlayer(playerId, playerName) {
     
     // Check if player is already selected
     if (window.localTeam.find(p => p.id === player.id)) {
-        alert(`${playerName} is already in your team!`);
+        // alert(`${playerName} is already in your team!`);
+        showStatusMessage(`${playerName} is already in your team!`, 'error');
         return;
     }
     
     // Check team size limit (11 players)
     if (window.localTeam.length >= 11) {
-        alert('Your team is full! (11 players maximum)');
+        // alert('Your team is full! (11 players maximum)');
+        showStatusMessage('Your team is full! (11 players maximum)', 'error');
         return;
     }
     
@@ -1047,7 +1049,8 @@ function addPlayer(playerId, playerName) {
     updateSquadBadges();
     updateSquadDisplay();
     console.log(`✅ Added ${playerName} to team. Team size: ${window.localTeam.length}`);
-    alert(`✅ Added ${playerName} to your team!`);
+    // alert(`✅ Added ${playerName} to your team!`);
+    showStatusMessage(`Added ${playerName} to your team.`, 'success');
 }
 
 // Dynamic search functionality
