@@ -1,0 +1,455 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Data Manager{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/data_manager.css' %}">
+
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="display-4 text-primary">
+                    <i class="fas fa-database"></i> Data Manager
+                </h1>
+                <div class="badge badge-info p-3 fs-5">
+                    Season {{ current_season }} - Week {{ current_gameweek }}
+                </div>
+            </div>
+            <p class="lead text-muted">
+                Manage game weeks, refresh player data, update costs, and handle Elo calculations
+            </p>
+        </div>
+    </div>
+
+    <!-- Status Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">Current Week</h5>
+                            <h2 class="mb-0">{{ current_gameweek }}</h2>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-calendar-week fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">Total Players</h5>
+                            <h2 class="mb-0">{{ total_players }}</h2>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-users fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">Season</h5>
+                            <h2 class="mb-0">{{ current_season }}</h2>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-trophy fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">Last Update</h5>
+                            <p class="mb-0 small">{{ last_update }}</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-sync-alt fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Management Actions -->
+    <div class="row">
+        <!-- Game Week Management -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-calendar-alt"></i> Current Game Week
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div id="gameweek-info" class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading gameweek information...</p>
+                    </div>
+                    
+                    <button class="btn btn-outline-primary btn-sm w-100 mt-3" id="refresh-gameweek-btn">
+                        <i class="fas fa-sync-alt"></i> Refresh Gameweek Info
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Refresh Operations -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-download"></i> Data Import & Refresh
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Import current gameweek data or full season data from FPL API</p>
+                    
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success" id="import-gameweek-btn">
+                            <i class="fas fa-plus-circle"></i> Import Current Gameweek
+                        </button>
+                        <button class="btn btn-warning" id="import-season-btn">
+                            <i class="fas fa-calendar-check"></i> Import Full Season (2025-26)
+                        </button>
+                        <button class="btn btn-outline-info" id="refresh-fixtures-btn">
+                            <i class="fas fa-calendar"></i> Refresh Fixtures
+                        </button>
+                    </div>
+                    
+                    <div id="refresh-status" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Player Position Updates -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-exchange-alt"></i> Player Management
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Update player positions and teams from FPL API</p>
+                    
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-info" id="update-positions-btn">
+                            <i class="fas fa-running"></i> Update Positions & Teams
+                        </button>
+                        <button class="btn btn-outline-warning" id="update-costs-btn">
+                            <i class="fas fa-pound-sign"></i> Update Player Costs
+                        </button>
+                    </div>
+                    
+                    <div id="position-status" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Elo Calculations -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <i class="fas fa-calculator"></i> Elo Calculations
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Recalculate player Elo ratings using optimized algorithms</p>
+                    
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-warning" id="recalculate-elos-btn">
+                            <i class="fas fa-chart-line"></i> Recalculate All Elos
+                        </button>
+                    </div>
+                    
+                    <div id="elo-status" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load gameweek information on page load
+    loadGameweekInfo();
+    
+    // Refresh Gameweek Info functionality
+    document.getElementById('refresh-gameweek-btn').addEventListener('click', function() {
+        loadGameweekInfo();
+    });
+    
+    // Function to load and display gameweek information
+    function loadGameweekInfo() {
+        const gameweekDiv = document.getElementById('gameweek-info');
+        
+        gameweekDiv.innerHTML = `
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading gameweek information...</p>
+        `;
+        
+        fetch('/api/gameweek_info/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const statusBadge = getStatusBadge(data.finished, data.is_current);
+                    const deadlineDate = new Date(data.deadline_time).toLocaleString();
+                    
+                    gameweekDiv.innerHTML = `
+                        <div class="text-center">
+                            <h2 class="display-4 text-primary mb-3">${data.current_gameweek}</h2>
+                            <h5 class="mb-3">${data.gameweek_name}</h5>
+                            <div class="mb-3">${statusBadge}</div>
+                            <div class="row text-center">
+                                <div class="col-12 mb-2">
+                                    <small class="text-muted">Deadline:</small><br>
+                                    <strong>${deadlineDate}</strong>
+                                </div>
+                                ${data.average_entry_score ? `
+                                <div class="col-6">
+                                    <small class="text-muted">Avg Score:</small><br>
+                                    <strong>${data.average_entry_score}</strong>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">High Score:</small><br>
+                                    <strong>${data.highest_score}</strong>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    gameweekDiv.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Failed to load gameweek info: ${data.error}
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                gameweekDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Error loading gameweek information
+                    </div>
+                `;
+                console.error('Error:', error);
+            });
+    }
+    
+    // Helper function to get status badge
+    function getStatusBadge(finished, isCurrent) {
+        if (finished) {
+            return '<span class="badge bg-secondary">Finished</span>';
+        } else if (isCurrent) {
+            return '<span class="badge bg-success">Live</span>';
+        } else {
+            return '<span class="badge bg-warning">Upcoming</span>';
+        }
+    }
+    
+    // Import Current Gameweek functionality
+    document.getElementById('import-gameweek-btn').addEventListener('click', function() {
+        const btn = this;
+        const originalText = btn.innerHTML;
+        const statusDiv = document.getElementById('refresh-status');
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing...';
+        statusDiv.innerHTML = '<div class="alert alert-info">Importing current gameweek data...</div>';
+        
+        fetch('/api/import_gameweek/')
+            .then(response => response.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                
+                if (data.success) {
+                    statusDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            <strong>Gameweek Import Complete!</strong><br>
+                            • New matches added: ${data.new_matches}<br>
+                            • Matches updated: ${data.updated_matches}<br>
+                            • Matches skipped: ${data.skipped_matches}<br>
+                            • Players processed: ${data.total_players}<br>
+                            • Current gameweek: ${data.gameweek}<br>
+                            • Duration: ${data.duration}
+                        </div>
+                    `;
+                } else {
+                    statusDiv.innerHTML = `
+                        <div class="alert alert-danger">
+                            <strong>Import Failed:</strong> ${data.error}
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                statusDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error:</strong> Failed to import gameweek data
+                    </div>
+                `;
+                console.error('Error:', error);
+            });
+    });
+    
+    // Import Full Season functionality
+    document.getElementById('import-season-btn').addEventListener('click', function() {
+        const btn = this;
+        const originalText = btn.innerHTML;
+        const statusDiv = document.getElementById('refresh-status');
+        
+        // Confirm before proceeding
+        if (!confirm('This will import all gameweeks for the 2025-26 season. This may take several minutes. Continue?')) {
+            return;
+        }
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing Season...';
+        statusDiv.innerHTML = '<div class="alert alert-info">Importing full season data from FPL API... This may take several minutes.</div>';
+        
+        fetch('/api/import_season/', {method: 'POST'})
+            .then(response => response.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                
+                if (data.success) {
+                    statusDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            <strong>Season Import Complete!</strong><br>
+                            • Season: ${data.season}<br>
+                            • Gameweeks processed: ${data.gameweeks_processed.length}<br>
+                            • New matches added: ${data.total_new_matches}<br>
+                            • Matches updated: ${data.total_updated_matches}<br>
+                            • Matches skipped: ${data.total_skipped_matches}<br>
+                            • Errors: ${data.total_errors}<br>
+                            • Duration: ${data.duration}
+                        </div>
+                    `;
+                } else {
+                    statusDiv.innerHTML = `
+                        <div class="alert alert-danger">
+                            <strong>Season Import Failed:</strong> ${data.error}
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                statusDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error:</strong> Failed to import season data
+                    </div>
+                `;
+                console.error('Error:', error);
+            });
+    });
+    
+    // Refresh Fixtures functionality
+    document.getElementById('refresh-fixtures-btn').addEventListener('click', function() {
+        const statusDiv = document.getElementById('refresh-status');
+        statusDiv.innerHTML = '<div class="alert alert-info">Refreshing fixtures...</div>';
+        
+        fetch('/api/refresh_fixtures/', {method: 'POST'})
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                statusDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+            } else {
+                statusDiv.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
+            }
+        })
+        .catch(error => {
+            statusDiv.innerHTML = `<div class="alert alert-danger">Error: ${error}</div>`;
+        });
+    });
+    
+    // Update Positions functionality
+    document.getElementById('update-positions-btn').addEventListener('click', function() {
+        const statusDiv = document.getElementById('position-status');
+        statusDiv.innerHTML = '<div class="alert alert-info">Updating positions and teams...</div>';
+        
+        fetch('/api/update_positions/', {method: 'POST'})
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                statusDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+            } else {
+                statusDiv.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
+            }
+        })
+        .catch(error => {
+            statusDiv.innerHTML = `<div class="alert alert-danger">Error: ${error}</div>`;
+        });
+    });
+    
+    // Update Costs functionality
+    document.getElementById('update-costs-btn').addEventListener('click', function() {
+        const statusDiv = document.getElementById('position-status');
+        statusDiv.innerHTML = '<div class="alert alert-info">Updating player costs from FPL...</div>';
+        
+        fetch('/api/update_costs/', {method: 'POST'})
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                statusDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+            } else {
+                statusDiv.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
+            }
+        })
+        .catch(error => {
+            statusDiv.innerHTML = `<div class="alert alert-danger">Error: ${error}</div>`;
+        });
+    });
+    
+    // Recalculate Elos functionality
+    document.getElementById('recalculate-elos-btn').addEventListener('click', function() {
+        const statusDiv = document.getElementById('elo-status');
+        statusDiv.innerHTML = '<div class="alert alert-info">Recalculating Elo ratings...</div>';
+        
+        fetch('/api/recalculate_elos/', {method: 'POST'})
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                statusDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+            } else {
+                statusDiv.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
+            }
+        })
+        .catch(error => {
+            statusDiv.innerHTML = `<div class="alert alert-danger">Error: ${error}</div>`;
+        });
+    });
+});
+</script>
+
+{% endblock %}

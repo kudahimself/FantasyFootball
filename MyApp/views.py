@@ -33,9 +33,10 @@ def team_selection(request):
 
 def data(request):
     """
-    Data management page for FPL position updates and Elo recalculations.
+    Redirect to Data Manager - consolidating player management functionality.
     """
-    return render(request, 'data.html')
+    from django.shortcuts import redirect
+    return redirect('data_manager')
 
 def squads(request):
     squad_numbers = range(1, 5) 
@@ -416,6 +417,25 @@ def player_info(request, player_name):
     # Get actual player name from database (for consistency)
     actual_player_name = matches.first().player_name
     
+    # Get player team information from current week
+    from MyApi.models import SystemSettings
+    settings = SystemSettings.get_settings()
+    current_week = settings.current_gameweek
+    
+    # Try to get team from Player model for current week, fallback to any week
+    player_team = None
+    try:
+        from MyApi.models import Player
+        player_obj = Player.objects.filter(name=actual_player_name, week=current_week).first()
+        if not player_obj:
+            # Fallback to any week if current week not found
+            player_obj = Player.objects.filter(name=actual_player_name).order_by('-week').first()
+        
+        if player_obj and player_obj.team:
+            player_team = player_obj.team
+    except Exception as e:
+        print(f"Error getting team for {actual_player_name}: {e}")
+    
     # Calculate statistics
     total_matches = matches.count()
     total_goals = sum(match.goals for match in matches)
@@ -442,6 +462,7 @@ def player_info(request, player_name):
     context = {
         'player_name': actual_player_name,
         'player_display_name': actual_player_name.replace('_', ' '),
+        'player_team': player_team,
         'matches': matches,
         'recent_matches': recent_matches,
         'total_matches': total_matches,
@@ -456,10 +477,11 @@ def player_info(request, player_name):
     return render(request, 'player_info.html', context)
 
 
-def gameweek_manager(request):
+def data_manager(request):
     """
-    Game week manager page to display current game week, set new game week,
-    and manage data refresh operations.
+    Data manager page to display current game week, set new game week,
+    manage data refresh operations, and handle player management tasks.
+    Combines game week management with player data operations.
     """
     from MyApi.models import SystemSettings, Player
     from django.utils import timezone
@@ -482,12 +504,12 @@ def gameweek_manager(request):
         print(f"Error loading game week manager data: {e}")
         context = {
             'current_gameweek': 1,
-            'current_season': '2024/25',
+            'current_season': '2025/26',
             'last_update': 'Never',
             'total_players': 0,
         }
     
-    return render(request, 'gameweek_manager.html', context)
+    return render(request, 'data_manager.html', context)
 
 
 @csrf_exempt
@@ -888,6 +910,103 @@ def system_info(request):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+
+@csrf_exempt
+def import_current_gameweek_data(request):
+    """
+    Import current gameweek player performance data from FPL API.
+    Safely appends new data without destroying existing records.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Only POST method allowed'})
+    
+    try:
+        import asyncio
+        from MyApi.utils.gameweek_importer import get_current_gameweek_data
+        
+        # Run the gameweek data import
+        result = asyncio.run(get_current_gameweek_data())
+        
+        if result.get('success'):
+            return JsonResponse({
+                'success': True,
+                'message': f"Successfully imported gameweek {result['gameweek']} data",
+                'gameweek': result['gameweek'],
+                'new_matches': result['new_matches'],
+                'updated_matches': result['updated_matches'],
+                'skipped_matches': result['skipped_matches'],
+                'errors': result['errors'],
+                'duration': f"{result['duration']:.2f} seconds",
+                'total_players': result['total_players']
+            })
+        else:
+            return JsonResponse({
+                'success': False, 
+                'error': result.get('error', 'Gameweek data import failed')
+            })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Gameweek import failed: {str(e)}'})
+
+
+@csrf_exempt
+def get_current_gameweek_info(request):
+    """
+    Get current gameweek information from FPL API for display purposes.
+    """
+    try:
+        from MyApi.utils.fpl_gameweek_info import get_current_gameweek_sync
+        
+        # Get gameweek information
+        info = get_current_gameweek_sync()
+        
+        return JsonResponse(info)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False, 
+            'error': f'Failed to fetch gameweek info: {str(e)}'
+        })
+
+
+@csrf_exempt
+def import_season_gameweeks(request):
+    """
+    Import all gameweeks for the current season (2025-26) from FPL API.
+    Provides clean, consistent data with proper team names.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Only POST method allowed'})
+    
+    try:
+        import asyncio
+        from MyApi.utils.season_gameweek_importer import import_current_season_data
+        
+        # Run the season gameweek import
+        result = asyncio.run(import_current_season_data())
+        
+        if result.get('success'):
+            return JsonResponse({
+                'success': True,
+                'message': f"Successfully imported season {result['season']} data",
+                'season': result['season'],
+                'gameweeks_processed': result['gameweeks_processed'],
+                'total_new_matches': result['total_new_matches'],
+                'total_updated_matches': result['total_updated_matches'],
+                'total_skipped_matches': result['total_skipped_matches'],
+                'total_errors': result['total_errors'],
+                'duration': f"{result['duration']:.2f} seconds",
+                'gameweek_stats': result.get('gameweek_stats', {})
+            })
+        else:
+            return JsonResponse({
+                'success': False, 
+                'error': result.get('error', 'Season gameweek import failed')
+            })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Season import failed: {str(e)}'})
 
 
 @csrf_exempt

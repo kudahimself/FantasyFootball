@@ -357,7 +357,7 @@ class SystemSettings(models.Model):
     Model to store system-wide settings like current game week, season, etc.
     """
     current_gameweek = models.IntegerField(default=1, help_text="Current game week number (1-38)")
-    current_season = models.CharField(max_length=20, default="2024/25", help_text="Current season (e.g., 2024/25)")
+    current_season = models.CharField(max_length=20, default="2025/26", help_text="Current season (e.g., 2025/26)")
     last_data_update = models.DateTimeField(null=True, blank=True, help_text="Last time data was refreshed from FPL API")
     last_fixtures_update = models.DateTimeField(null=True, blank=True, help_text="Last time fixtures were updated")
     
@@ -384,7 +384,7 @@ class SystemSettings(models.Model):
             id=1,  # Ensure only one settings instance
             defaults={
                 'current_gameweek': 1,
-                'current_season': '2024/25'
+                'current_season': '2025/26'
             }
         )
         return settings

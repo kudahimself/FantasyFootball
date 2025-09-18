@@ -24,20 +24,15 @@
           <li class="nav-item{% if request.resolver_match.url_name == 'team_selection' %} active{% endif %}">
             <a class="nav-link" href="{% url 'team_selection' %}">Team Selection</a>
           </li>
-          <li class="nav-item{% if request.resolver_match.url_name == 'data' %} active{% endif %}">
-            <a class="nav-link" href="{% url 'data' %}">
-              <i class="fas fa-database"></i> Manage Players
-            </a>
-          </li>
           <li class="nav-item{% if request.resolver_match.url_name == 'squads' %} active{% endif %}">
             <a class="nav-link" href="{% url 'squads' %}">Squads</a>
           </li>
           <li class="nav-item{% if request.resolver_match.url_name == 'player_ratings' %} active{% endif %}">
             <a class="nav-link" href="{% url 'player_ratings' %}">Player Ratings</a>
           </li>
-          <li class="nav-item{% if request.resolver_match.url_name == 'gameweek_manager' %} active{% endif %}">
-            <a class="nav-link" href="{% url 'gameweek_manager' %}">
-              <i class="fas fa-calendar-alt"></i> Game Week Manager
+          <li class="nav-item{% if request.resolver_match.url_name == 'data_manager' %} active{% endif %}">
+            <a class="nav-link" href="{% url 'data_manager' %}">
+              <i class="fas fa-database"></i> Data Manager
             </a>
           </li>
         </ul>
