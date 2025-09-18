@@ -1,12 +1,12 @@
 """
 Projected Points Calculator
 
-This module calculates projected points for players' next 4 games using the EXACT same
+This module calculates projected points for players' next 3 games using the EXACT same
 expected points formula as the ELO calculator: E_a = k/(1 + 10**(League_Rating/current_elo))
 
 Key features:
 - Uses identical formula to ELO calculator for consistency
-- Calculates expected points for next 4 fixtures
+- Calculates expected points for next 3 fixtures (FPL API limitation)
 - Includes opposition strength multiplier from FPL API
 - Stores results in ProjectedPoints model for easy access
 """
@@ -79,17 +79,20 @@ def apply_opposition_multiplier(expected_points: float, difficulty_rating: int,
     Returns:
         float: Adjusted expected points
     """
-    # Convert FPL difficulty rating to multiplier
-    # 1 = Very Easy (1.2x), 2 = Easy (1.1x), 3 = Average (1.0x), 4 = Hard (0.9x), 5 = Very Hard (0.8x)
-    difficulty_multipliers = {
-        1: 1.8,  # Very easy fixture
-        2: 1.6,  # Easy fixture
-        3: 1.0,  # Average fixture
-        4: 0.7,  # Hard fixture
-        5: 0.4   # Very hard fixture
-    }
-    
-    difficulty_multiplier = difficulty_multipliers.get(difficulty_rating, 1.0)
+    try:
+        # Try to get dynamic multipliers from database
+        from MyApi.models import DifficultyMultiplier
+        difficulty_multiplier = DifficultyMultiplier.get_multiplier(difficulty_rating)
+    except Exception:
+        # Fallback to hardcoded multipliers if database access fails
+        difficulty_multipliers = {
+            1: 3.2,  # Very easy fixture
+            2: 2.8,  # Easy fixture
+            3: 2.1,  # Average fixture
+            4: 1.9,  # Hard fixture
+            5: 1.5   # Very hard fixture
+        }
+        difficulty_multiplier = difficulty_multipliers.get(difficulty_rating, 1.0)
     
     # Combine difficulty and opposition strength
     total_multiplier = difficulty_multiplier * opposition_strength
@@ -167,12 +170,12 @@ async def get_player_team_mapping() -> Dict[str, str]:
         return {}
 
 
-async def create_player_fixtures(next_gameweeks: int = 4) -> int:
+async def create_player_fixtures(next_gameweeks: int = 3) -> int:
     """
     Create PlayerFixture records for the next N gameweeks.
     
     Args:
-        next_gameweeks (int): Number of gameweeks to project
+        next_gameweeks (int): Number of gameweeks to project (default 3)
         
     Returns:
         int: Number of fixtures created
@@ -249,7 +252,7 @@ async def create_player_fixtures(next_gameweeks: int = 4) -> int:
 
 async def calculate_projected_points_for_player(player_name: str, override_existing: bool = True) -> int:
     """
-    Calculate projected points for a specific player's next 4 games.
+    Calculate projected points for a specific player's next 3 games.
     
     Args:
         player_name (str): Name of the player
@@ -272,10 +275,10 @@ async def calculate_projected_points_for_player(player_name: str, override_exist
             logger.warning(f"Player {player_name} not found for week {current_week}")
             return 0
         
-        # Get next 4 fixtures for this player
+        # Get next 3 fixtures for this player
         fixtures = await sync_to_async(list)(
             PlayerFixture.objects.filter(player_name=player_name)
-            .order_by('gameweek')[:4]
+            .order_by('gameweek')[:3]
         )
         
         if not fixtures:
@@ -368,9 +371,9 @@ async def calculate_all_projected_points(override_existing: bool = True) -> Dict
     try:
         from MyApi.models import Player, SystemSettings
         
-        # First, create fixtures for next 4 gameweeks
+        # First, create fixtures for next 3 gameweeks
         logger.info("Creating player fixtures...")
-        fixtures_created = await create_player_fixtures(next_gameweeks=4)
+        fixtures_created = await create_player_fixtures(next_gameweeks=3)
         
         # Get all current players
         current_week = await sync_to_async(SystemSettings.get_current_gameweek)()
@@ -444,7 +447,7 @@ async def get_player_projected_summary(player_name: str) -> Dict[str, Any]:
         
         projections = await sync_to_async(list)(
             ProjectedPoints.objects.filter(player_name=player_name)
-            .order_by('gameweek')[:4]
+            .order_by('gameweek')[:3]
         )
         
         if not projections:

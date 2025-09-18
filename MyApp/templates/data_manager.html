@@ -11,10 +11,10 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
-                <h1 class="display-4 text-primary">
+                <h1 class="display-4 text-secondary">
                     <i class="fas fa-database"></i> Data Manager
                 </h1>
-                <div class="badge badge-info p-3 fs-5">
+                <div class="badge badge-secondary p-3 fs-5">
                     Season {{ current_season }} - Week {{ current_gameweek }}
                 </div>
             </div>
@@ -27,7 +27,7 @@
     <!-- Status Cards -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card bg-primary text-white">
+            <div class="card" style="background-color: #1e3a8a; color: white;">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
@@ -42,7 +42,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-success text-white">
+            <div class="card" style="background-color: #2563eb; color: white;">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
@@ -57,7 +57,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-info text-white">
+            <div class="card" style="background-color: #1e3a8a; color: white;">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
@@ -72,7 +72,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-warning text-dark">
+            <div class="card" style="background-color: #2563eb; color: white;">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
@@ -93,7 +93,7 @@
         <!-- Game Week Management -->
         <div class="col-md-6 mb-4">
             <div class="card">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header" style="background-color: #1e3a8a; color: white;">
                     <h4 class="mb-0">
                         <i class="fas fa-calendar-alt"></i> Current Game Week
                     </h4>
@@ -116,7 +116,7 @@
         <!-- Data Refresh Operations -->
         <div class="col-md-6 mb-4">
             <div class="card">
-                <div class="card-header bg-success text-white">
+                <div class="card-header" style="background-color: #2563eb; color: white;">
                     <h4 class="mb-0">
                         <i class="fas fa-download"></i> Data Import & Refresh
                     </h4>
@@ -144,7 +144,7 @@
         <!-- Player Position Updates -->
         <div class="col-md-6 mb-4">
             <div class="card">
-                <div class="card-header bg-info text-white">
+                <div class="card-header" style="background-color: #1e3a8a; color: white;">
                     <h4 class="mb-0">
                         <i class="fas fa-exchange-alt"></i> Player Management
                     </h4>
@@ -153,7 +153,7 @@
                     <p class="text-muted">Update player positions and teams from FPL API</p>
                     
                     <div class="d-grid gap-2">
-                        <button class="btn btn-outline-info" id="update-positions-btn">
+                        <button class="btn btn-outline-primary" id="update-positions-btn">
                             <i class="fas fa-running"></i> Update Positions & Teams
                         </button>
                         <button class="btn btn-outline-warning" id="update-costs-btn">
@@ -169,7 +169,7 @@
         <!-- Elo Calculations -->
         <div class="col-md-6 mb-4">
             <div class="card">
-                <div class="card-header bg-warning text-dark">
+                <div class="card-header" style="background-color: #2563eb; color: white;">
                     <h4 class="mb-0">
                         <i class="fas fa-calculator"></i> Elo Calculations
                     </h4>
@@ -178,7 +178,7 @@
                     <p class="text-muted">Recalculate player Elo ratings using optimized algorithms</p>
                     
                     <div class="d-grid gap-2">
-                        <button class="btn btn-warning" id="recalculate-elos-btn">
+                        <button class="btn btn-info" id="recalculate-elos-btn">
                             <i class="fas fa-chart-line"></i> Recalculate All Elos
                         </button>
                     </div>
@@ -191,21 +191,25 @@
         <!-- Projected Points Calculation -->
         <div class="col-md-6">
             <div class="card">
-                <div class="card-header">
-                    <h4>
+                <div class="card-header" style="background-color: #1e3a8a; color: white;">
+                    <h4 class="mb-0">
                         <i class="fas fa-crystal-ball"></i> Projected Points
                     </h4>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted">Calculate projected points for all players' next 4 games using ELO formula</p>
+                    <p class="text-muted">Calculate projected points for all players' next 3 games using ELO formula</p>
                     
                     <div class="d-grid gap-2">
-                        <button class="btn btn-info" id="calculate-projected-btn">
+                        <button class="btn btn-primary" id="calculate-projected-btn">
                             <i class="fas fa-calculator"></i> Calculate Projected Points
+                        </button>
+                        <button class="btn btn-secondary" id="recalculate-multipliers-btn">
+                            <i class="fas fa-sync-alt"></i> Recalculate Difficulty Multipliers
                         </button>
                     </div>
                     
                     <div id="projected-status" class="mt-3"></div>
+                    <div id="multipliers-status" class="mt-3"></div>
                 </div>
             </div>
         </div>
@@ -290,7 +294,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (isCurrent) {
             return '<span class="badge bg-success">Live</span>';
         } else {
-            return '<span class="badge bg-warning">Upcoming</span>';
+            return '<span class="badge bg-primary">Upcoming</span>';
         }
     }
     
@@ -497,6 +501,48 @@ document.addEventListener('DOMContentLoaded', function() {
                         • Successful players: ${data.successful_players}<br>
                         • Failed players: ${data.failed_players}<br>
                         • Total players: ${data.total_players}
+                    </div>
+                `;
+            } else {
+                statusDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error:</strong> ${data.error}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            statusDiv.innerHTML = `<div class="alert alert-danger">Error: ${error}</div>`;
+        });
+    });
+    
+    // Recalculate Difficulty Multipliers functionality
+    document.getElementById('recalculate-multipliers-btn').addEventListener('click', function() {
+        const btn = this;
+        const originalText = btn.innerHTML;
+        const statusDiv = document.getElementById('multipliers-status');
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Recalculating...';
+        statusDiv.innerHTML = '<div class="alert alert-info">Recalculating difficulty multipliers using current season data...</div>';
+        
+        fetch('/api/recalculate_multipliers/', {method: 'POST'})
+        .then(response => response.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            
+            if (data.success) {
+                statusDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <strong>Difficulty Multipliers Recalculated!</strong><br>
+                        • Matches processed: ${data.matches_processed}<br>
+                        • Multipliers updated:<br>
+                        ${Object.entries(data.multipliers).map(([diff, mult]) => 
+                            `&nbsp;&nbsp;Difficulty ${diff}: ${mult}x`
+                        ).join('<br>')}
                     </div>
                 `;
             } else {

@@ -28,8 +28,65 @@ def home(request):
 def team_selection(request):
     """
     Team Selection page for building and managing fantasy squads.
+    Renders player list on the server-side like player_ratings.
     """
-    return render(request, 'team_selection.html')
+    try:
+        week = 4  # Configurable week
+        players_queryset = Player.objects.filter(week=week)
+
+        if not players_queryset.exists():
+            return render(request, 'team_selection.html', {'players': [], 'error': f'No player data found for week {week}.'})
+
+        # Import models for projected points
+        from MyApi.models import ProjectedPoints
+
+        players_data = []
+        for player in players_queryset:
+            # Get projected points (total for next 3 games)
+            projected_points = 0
+            try:
+                total_projected = ProjectedPoints.get_total_projected_points(player.name, games=3)
+                projected_points = round(total_projected, 1) if total_projected else 0
+            except Exception as e:
+                projected_points = 0
+
+            position_map = {'Keeper': 'GKP', 'Defender': 'DEF', 'Midfielder': 'MID', 'Attacker': 'FWD'}
+            players_data.append({
+                'id': player.id,
+                'name': player.name,
+                'team': player.team or 'Unknown Team',
+                'position': position_map.get(player.position, player.position),
+                'elo_rating': round(float(player.elo), 1),
+                'cost': float(player.cost),
+                'projected_points': projected_points,
+            })
+
+        players_data.sort(key=lambda x: x['elo_rating'], reverse=True)
+
+        # Load current squad from database
+        try:
+            current_squad_instance = CurrentSquad.get_or_create_current_squad()
+            current_squad = current_squad_instance.squad
+        except Exception as e:
+            print(f"Error loading current squad: {e}")
+            current_squad = {
+                "goalkeepers": [],
+                "defenders": [],
+                "midfielders": [],
+                "forwards": []
+            }
+
+        context = {
+            'players': players_data,
+            'players_json': json.dumps(players_data),
+            'current_squad': current_squad,
+            'current_squad_json': json.dumps(current_squad),
+            'total_players': len(players_data)
+        }
+        return render(request, 'team_selection.html', context)
+
+    except Exception as e:
+        return render(request, 'team_selection.html', {'players': [], 'error': f'Error loading player data: {str(e)}'})
 
 def squads(request):
     squad_numbers = range(1, 5) 
@@ -62,10 +119,10 @@ def player_ratings(request):
         # Convert to list of dictionaries for template
         players_data = []
         for player in players_queryset:
-            # Get projected points (total for next 4 games)
+            # Get projected points (total for next 3 games)
             projected_points = 0
             try:
-                total_projected = ProjectedPoints.get_total_projected_points(player.name, games=4)
+                total_projected = ProjectedPoints.get_total_projected_points(player.name, games=3)
                 projected_points = round(total_projected, 1) if total_projected else 0
             except Exception as e:
                 projected_points = 0
@@ -1091,7 +1148,7 @@ def update_player_costs_from_fpl(request):
 @csrf_exempt
 def calculate_projected_points(request):
     """
-    API endpoint to calculate projected points for all players' next 4 games.
+    API endpoint to calculate projected points for all players' next 3 games.
     Uses the same expected points formula as ELO calculator.
     """
     if request.method != 'POST':
@@ -1204,7 +1261,7 @@ def get_all_projected_points(request):
                     'error': f'Player with ID {player_id} not found'
                 })
         
-        # Get top players by total projected points for next 4 games
+        # Get top players by total projected points for next 3 games
         top_players = (
             ProjectedPoints.objects
             .values('player_name')
@@ -1313,6 +1370,51 @@ def generate_squads_points(request):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': f'Squad generation failed: {str(e)}'})
+
+
+@csrf_exempt
+def recalculate_multipliers(request):
+    """
+    API endpoint to recalculate difficulty multipliers using current season data.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Only POST method allowed'})
+    
+    try:
+        import asyncio
+        import sys
+        import os
+        from django.conf import settings
+        
+        # Add the project directory to Python path
+        project_dir = settings.BASE_DIR
+        if project_dir not in sys.path:
+            sys.path.append(str(project_dir))
+        
+        # Import the difficulty multiplier calculator
+        from MyApi.utils.calculate_difficulty_multiplier import recalculate_difficulty_multipliers
+        
+        # Run the multiplier calculation
+        result = recalculate_difficulty_multipliers()
+        
+        if result['success']:
+            return JsonResponse({
+                'success': True,
+                'matches_processed': result.get('matches_processed', 0),
+                'multipliers': result.get('multipliers', {}),
+                'message': 'Difficulty multipliers successfully recalculated'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': result.get('error', 'Unknown error occurred')
+            })
+            
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to recalculate multipliers: {str(e)}'
+        })
 
 
 def generate_single_squad_points(players, formation, squad_num):

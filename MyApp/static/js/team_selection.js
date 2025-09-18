@@ -48,7 +48,15 @@ function loadAllPlayers() {
 // Intelligent player search function
 function searchPlayers(query) {
     const resultsContainer = document.getElementById('player-search-results');
-    const positionFilter = document.getElementById('player-position').value;
+    const positionFilterElement = document.getElementById('player-position');
+    
+    // Check if elements exist (they might not if using new interface)
+    if (!resultsContainer || !positionFilterElement) {
+        console.log('Old search elements not found - probably using new interface');
+        return;
+    }
+    
+    const positionFilter = positionFilterElement.value;
     
     if (!query || query.length < 2) {
         resultsContainer.style.display = 'none';
@@ -86,6 +94,12 @@ function searchPlayers(query) {
 function displaySearchResults(players) {
     const resultsContainer = document.getElementById('player-search-results');
     
+    // Check if element exists
+    if (!resultsContainer) {
+        console.log('Search results container not found - probably using new interface');
+        return;
+    }
+    
     if (players.length === 0) {
         resultsContainer.innerHTML = '<div style="padding: 10px; color: #666; text-align: center;">No players found</div>';
         resultsContainer.style.display = 'block';
@@ -120,30 +134,47 @@ function displaySearchResults(players) {
 // Select player from search results
 function selectPlayerFromSearch(player) {
     selectedPlayer = player;
-    document.getElementById('player-search-input').value = player.name;
-    document.getElementById('player-search-results').style.display = 'none';
     
-    // Update player info display
+    const searchInput = document.getElementById('player-search-input');
+    const searchResults = document.getElementById('player-search-results');
     const playerInfo = document.getElementById('player-info');
-    playerInfo.innerHTML = `
-        <strong>${player.name}</strong><br>
-        Team: ${player.team} | Position: ${getPositionDisplay(player.position)} | ELO Rating: ${player.elo.toFixed(1)} | Cost: £${player.cost}m
-    `;
+    
+    // Check if elements exist
+    if (searchInput) {
+        searchInput.value = player.name;
+    }
+    if (searchResults) {
+        searchResults.style.display = 'none';
+    }
+    
+    // Update player info display if element exists
+    if (playerInfo) {
+        playerInfo.innerHTML = `
+            <strong>${player.name}</strong><br>
+            Team: ${player.team} | Position: ${getPositionDisplay(player.position)} | ELO Rating: ${player.elo.toFixed(1)} | Cost: £${player.cost}m
+        `;
+    }
 }
 
 // Show search results when input is focused
 function showSearchResults() {
-    const query = document.getElementById('player-search-input').value;
-    if (query.length >= 2) {
-        searchPlayers(query);
+    const searchInput = document.getElementById('player-search-input');
+    if (searchInput) {
+        const query = searchInput.value;
+        if (query.length >= 2) {
+            searchPlayers(query);
+        }
     }
 }
 
 // Update search when position filter changes
 function updatePlayerSearch() {
-    const query = document.getElementById('player-search-input').value;
-    if (query.length >= 2) {
-        searchPlayers(query);
+    const searchInput = document.getElementById('player-search-input');
+    if (searchInput) {
+        const query = searchInput.value;
+        if (query.length >= 2) {
+            searchPlayers(query);
+        }
     }
 }
 
@@ -162,7 +193,10 @@ function getPositionDisplay(position) {
 document.addEventListener('click', function(event) {
     const searchContainer = event.target.closest('#player-search-input, #player-search-results');
     if (!searchContainer) {
-        document.getElementById('player-search-results').style.display = 'none';
+        const searchResults = document.getElementById('player-search-results');
+        if (searchResults) {
+            searchResults.style.display = 'none';
+        }
     }
 });
 
@@ -188,6 +222,11 @@ function loadCurrentSquad() {
             currentSquad = data.current_squad;
             console.log("Current squad loaded:", currentSquad);
             displayCurrentSquad();
+            
+            // Refresh the player selection pane if it exists
+            if (typeof refreshPlayerPane === 'function') {
+                refreshPlayerPane();
+            }
         })
         .catch(error => {
             console.error('Error loading current squad:', error);
@@ -214,97 +253,7 @@ function displayCurrentSquad() {
     ];
     
     generateFormationGrid(positions, currentSquad, squadContent);
-    
-    // Calculate and update team totals
-    updateTeamTotals();
-}
-
-// Calculate and display team totals (Elo and Cost)
-function updateTeamTotals() {
-    console.log('updateTeamTotals called');
-    
-    // Debug: Check if currentSquad is populated
-    if (!currentSquad || Object.keys(currentSquad).length === 0) {
-        console.log('No squad data available for calculation');
-        return;
-    }
-    
-    // Check if DOM elements exist
-    const teamEloElement = document.getElementById('team-elo');
-    const teamCostElement = document.getElementById('team-cost');
-    const teamProjectedPointsElement = document.getElementById('team-projected');
-    
-    if (!teamEloElement || !teamCostElement || !teamProjectedPointsElement) {
-        console.log('DOM elements not found:', {
-            teamElo: !!teamEloElement,
-            teamCost: !!teamCostElement,
-            teamProjectedPoints: !!teamProjectedPointsElement
-        });
-        // Retry in 100ms if elements not found
-        setTimeout(updateTeamTotals, 100);
-        return;
-    }
-    
-    let totalElo = 0;
-    let totalCost = 0;
-    let playerCount = 0;
-    let playerIds = [];
-    
-    // Calculate totals from all positions and collect player IDs
-    const positions = ['goalkeepers', 'defenders', 'midfielders', 'forwards'];
-    
-    positions.forEach(position => {
-        if (currentSquad[position]) {
-            currentSquad[position].forEach(player => {
-                if (player && player.elo !== undefined && player.cost !== undefined) {
-                    totalElo += parseFloat(player.elo);
-                    totalCost += parseFloat(player.cost);
-                    playerCount++;
-                    if (player.id) {
-                        playerIds.push(player.id);
-                    }
-                }
-            });
-        }
-    });
-    
-    // Calculate average Elo (more meaningful than total Elo)
-    const avgElo = playerCount > 0 ? totalElo / playerCount : 0;
-    
-    console.log(`Updating totals: ${playerCount} players, Avg Elo: ${avgElo.toFixed(1)}, Total Cost: £${totalCost.toFixed(1)}m`);
-    
-    // Update ELO and Cost display immediately
-    teamEloElement.textContent = playerCount > 0 ? avgElo.toFixed(1) : '--';
-    teamCostElement.textContent = playerCount > 0 ? totalCost.toFixed(1) : '--';
-    
-    // Calculate and update projected points asynchronously
-    if (playerIds.length > 0) {
-        // Get projected points for all players
-        const projectedPointsPromises = playerIds.map(playerId => 
-            fetch(`/api/all_projected_points/?player_id=${playerId}`)
-                .then(response => response.json())
-                .then(data => parseFloat(data.total_projected_points) || 0)
-                .catch(error => {
-                    console.error(`Error fetching projected points for player ${playerId}:`, error);
-                    return 0;
-                })
-        );
-        
-        Promise.all(projectedPointsPromises)
-            .then(projectedPointsArray => {
-                const totalProjectedPoints = projectedPointsArray.reduce((sum, points) => sum + points, 0);
-                teamProjectedPointsElement.textContent = totalProjectedPoints.toFixed(1);
-                console.log(`Projected points updated: ${totalProjectedPoints.toFixed(1)}`);
-            })
-            .catch(error => {
-                console.error('Error calculating total projected points:', error);
-                teamProjectedPointsElement.textContent = '--';
-            });
-    } else {
-        teamProjectedPointsElement.textContent = '--';
-    }
-    
-    console.log('Display updated successfully');
+    // No more team totals calculation here; handled by updateSquadBadges in template
 }
 
 // Generate formation grid (reused from squads.js but adapted for current squad)
@@ -418,11 +367,28 @@ function addSelectedPlayerToSquad() {
             showStatusMessage(data.message, 'success');
             currentSquad = data.squad;
             displayCurrentSquad();
-            // Reset the search
-            document.getElementById('player-search-input').value = '';
-            document.getElementById('player-info').innerHTML = '';
-            document.getElementById('player-search-results').style.display = 'none';
+            
+            // Reset the search elements if they exist
+            const searchInput = document.getElementById('player-search-input');
+            const playerInfo = document.getElementById('player-info');
+            const searchResults = document.getElementById('player-search-results');
+            
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            if (playerInfo) {
+                playerInfo.innerHTML = '';
+            }
+            if (searchResults) {
+                searchResults.style.display = 'none';
+            }
+            
             selectedPlayer = null;
+            
+            // Refresh the player selection pane if it exists
+            if (typeof refreshPlayerPane === 'function') {
+                refreshPlayerPane();
+            }
         }
     })
     .catch(error => {
@@ -458,6 +424,11 @@ function removePlayerFromSquad(position, playerName) {
             showStatusMessage(data.message, 'success');
             currentSquad = data.squad;
             displayCurrentSquad();
+            
+            // Refresh the player selection pane if it exists
+            if (typeof refreshPlayerPane === 'function') {
+                refreshPlayerPane();
+            }
         }
     })
     .catch(error => {

@@ -26,6 +26,7 @@ urlpatterns = [
     path('api/update_costs/', views.update_player_costs_from_fpl, name='update_player_costs_from_fpl'),
     # Projected Points API endpoints
     path('api/calculate_projected_points/', views.calculate_projected_points, name='calculate_projected_points'),
+    path('api/recalculate_multipliers/', views.recalculate_multipliers, name='recalculate_multipliers'),
     path('api/projected_points/<str:player_name>/', views.get_player_projected_points, name='get_player_projected_points'),
     path('api/all_projected_points/', views.get_all_projected_points, name='get_all_projected_points'),
     # Squad Points API endpoints

@@ -475,7 +475,7 @@ class SystemSettings(models.Model):
 class PlayerFixture(models.Model):
     """
     Model to store upcoming fixtures for players.
-    Used for projecting points for next 4 games.
+    Used for projecting points for next 3 games.
     """
     player_name = models.CharField(max_length=200, db_index=True)
     team = models.CharField(max_length=100)  # Player's team
@@ -506,7 +506,7 @@ class PlayerFixture(models.Model):
 
 class ProjectedPoints(models.Model):
     """
-    Model to store projected points for players for the next 4 games.
+    Model to store projected points for players for the next 3 games.
     Uses the same expected points formula as ELO calculator.
     """
     player_name = models.CharField(max_length=200, db_index=True)
@@ -547,12 +547,56 @@ class ProjectedPoints(models.Model):
         return f"{self.player_name} vs {self.opponent} GW{self.gameweek}: {self.expected_points:.2f} pts"
     
     @classmethod
-    def get_next_4_games(cls, player_name):
-        """Get projected points for next 4 games for a specific player."""
-        return cls.objects.filter(player_name=player_name).order_by('gameweek')[:4]
+    def get_next_3_games(cls, player_name):
+        """Get projected points for next 3 games for a specific player."""
+        return cls.objects.filter(player_name=player_name).order_by('gameweek')[:3]
     
     @classmethod
-    def get_total_projected_points(cls, player_name, games=4):
+    def get_total_projected_points(cls, player_name, games=3):
         """Get total projected points for next N games."""
-        projections = cls.get_next_4_games(player_name)[:games]
+        projections = cls.get_next_3_games(player_name)[:games]
         return sum(proj.adjusted_expected_points for proj in projections)
+
+
+class DifficultyMultiplier(models.Model):
+    """
+    Model to store calculated difficulty multipliers for FPL difficulty ratings.
+    These are dynamically calculated based on actual player performance data.
+    """
+    difficulty_rating = models.IntegerField(unique=True, help_text="FPL difficulty rating (1-5)")
+    multiplier = models.FloatField(help_text="Calculated multiplier for this difficulty level")
+    sample_size = models.IntegerField(default=0, help_text="Number of matches used in calculation")
+    last_calculated = models.DateTimeField(auto_now=True, help_text="When this multiplier was last updated")
+    
+    class Meta:
+        db_table = 'difficulty_multipliers'
+        ordering = ['difficulty_rating']
+    
+    def __str__(self):
+        difficulty_names = {1: "Very Easy", 2: "Easy", 3: "Average", 4: "Hard", 5: "Very Hard"}
+        name = difficulty_names.get(self.difficulty_rating, f"Difficulty {self.difficulty_rating}")
+        return f"{name}: {self.multiplier}x (n={self.sample_size})"
+    
+    @classmethod
+    def get_multiplier(cls, difficulty_rating: int) -> float:
+        """Get multiplier for a specific difficulty rating, with fallback to defaults."""
+        try:
+            multiplier_obj = cls.objects.get(difficulty_rating=difficulty_rating)
+            return multiplier_obj.multiplier
+        except cls.DoesNotExist:
+            # Fallback to logical defaults if not found
+            defaults = {1: 3.2, 2: 2.8, 3: 2.1, 4: 1.9, 5: 1.5}
+            return defaults.get(difficulty_rating, 1.0)
+    
+    @classmethod
+    def update_multipliers(cls, multipliers_dict: dict, sample_sizes: dict = None):
+        """Update all multipliers from a dictionary."""
+        for difficulty, multiplier in multipliers_dict.items():
+            sample_size = sample_sizes.get(difficulty, 0) if sample_sizes else 0
+            cls.objects.update_or_create(
+                difficulty_rating=difficulty,
+                defaults={
+                    'multiplier': multiplier,
+                    'sample_size': sample_size
+                }
+            )
