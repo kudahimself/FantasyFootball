@@ -152,6 +152,71 @@
     }
 }
 
+/* Projected Points styling */
+.points-high {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.points-medium {
+    color: #ffc107;
+    font-weight: bold;
+}
+
+.points-low {
+    color: #6c757d;
+}
+
+/* Fixture cells styling */
+.fixtures-cell {
+    padding: 4px 6px !important;
+    vertical-align: middle;
+    min-width: 180px;
+}
+
+.fixtures-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.fixture {
+    font-size: 0.8em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 1px 4px;
+    background-color: #f8f9fa;
+    border-radius: 3px;
+    border-left: 3px solid #6c757d; /* Default gray */
+}
+
+/* FPL Difficulty-based colors */
+.fixture.difficulty-1 {
+    border-left-color: #28a745; /* Green - Very Easy */
+    background-color: #d4edda;
+}
+
+.fixture.difficulty-2 {
+    border-left-color: #20c997; /* Light Green - Easy */
+    background-color: #d1ecf1;
+}
+
+.fixture.difficulty-3 {
+    border-left-color: #ffc107; /* Yellow - Average */
+    background-color: #fff3cd;
+}
+
+.fixture.difficulty-4 {
+    border-left-color: #dc3545; /* Red - Very Hard */
+    background-color: #f8d7da;
+}
+
+.fixture.difficulty-5 {
+    border-left-color: #dc3545; /* Red - Very Hard */
+    background-color: #dd5b66;
+}
+
 /* Player name links */
 .player-link {
     color: #212529 !important;
@@ -184,6 +249,15 @@
     
     .table-container {
         font-size: 0.8em;
+    }
+    
+    .fixtures-cell {
+        min-width: 140px;
+    }
+    
+    .fixture {
+        font-size: 0.7em;
+        padding: 1px 2px;
     }
     
     .stats-summary {

@@ -82,11 +82,11 @@ def apply_opposition_multiplier(expected_points: float, difficulty_rating: int,
     # Convert FPL difficulty rating to multiplier
     # 1 = Very Easy (1.2x), 2 = Easy (1.1x), 3 = Average (1.0x), 4 = Hard (0.9x), 5 = Very Hard (0.8x)
     difficulty_multipliers = {
-        1: 1.4,  # Very easy fixture
-        2: 1.2,  # Easy fixture
+        1: 1.8,  # Very easy fixture
+        2: 1.6,  # Easy fixture
         3: 1.0,  # Average fixture
-        4: 0.8,  # Hard fixture
-        5: 0.6   # Very hard fixture
+        4: 0.7,  # Hard fixture
+        5: 0.4   # Very hard fixture
     }
     
     difficulty_multiplier = difficulty_multipliers.get(difficulty_rating, 1.0)

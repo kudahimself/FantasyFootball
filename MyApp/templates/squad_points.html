@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Squads{% endblock %}
+{% block title %}Squad Builder - Projected Points{% endblock %}
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/squads.css' %}">
 
 <style>
-    /* Squads page: remove horizontal padding so formation spans full screen width */
+    /* Squad Points page: remove horizontal padding so formation spans full screen width */
     .container-fluid { padding-left: 0 !important; padding-right: 0 !important; }
     #squad { padding: 0 !important; margin: 0 !important; }
     #squad-content { padding: 0 !important; margin: 0 !important; }
@@ -100,15 +100,22 @@
         margin-right: 15px;
     }
     
-    /* Toggle switch styles */
-    .switch {
-        position: relative;
-        display: inline-block;
-        width: 50px;
-        height: 24px;
+    /* Toggle switch styling */
+    .selection-mode-toggle {
+        display: flex;
+        align-items: center;
+        margin-left: 15px;
     }
     
-    .switch input {
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 34px;
+        margin: 0 10px;
+    }
+    
+    .toggle-switch input {
         opacity: 0;
         width: 0;
         height: 0;
@@ -121,35 +128,38 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background-color: #28a745;
+        background-color: #ccc;
         transition: .4s;
+        border-radius: 34px;
     }
     
     .slider:before {
         position: absolute;
         content: "";
-        height: 18px;
-        width: 18px;
-        left: 3px;
-        bottom: 3px;
+        height: 26px;
+        width: 26px;
+        left: 4px;
+        bottom: 4px;
         background-color: white;
         transition: .4s;
+        border-radius: 50%;
     }
     
     input:checked + .slider {
-        background-color: #007bff;
+        background-color: #2196F3;
     }
     
     input:checked + .slider:before {
         transform: translateX(26px);
     }
     
-    .slider.round {
-        border-radius: 24px;
+    .mode-label {
+        font-weight: bold;
+        font-size: 14px;
     }
     
-    .slider.round:before {
-        border-radius: 50%;
+    .mode-label.active {
+        color: #2196F3;
     }
 </style>
 
@@ -158,17 +168,17 @@
     <div class="btn-toolbar w-100" role="toolbar" aria-label="Squad toolbar">
         <div class="btn-group" role="group" aria-label="Generate and select squad">
             <button id="btn-generate-squads" type="button" class="btn btn-success">Generate Squads</button>
-               <div class="input-group input-group-sm ml-2" style="width: auto;">
-                   <div class="input-group-prepend">
-                       <span class="input-group-text">Formation</span>
-                   </div>
-                   <select id="formation-select" class="form-control">
-                       <option value="3-4-3" selected>3-4-3</option>
-                       <option value="3-5-2">3-5-2</option>
-                       <option value="4-4-2">4-4-2</option>
-                       <option value="4-3-3">4-3-3</option>
-                   </select>
-               </div>
+            <div class="input-group input-group-sm ml-2" style="width: auto;">
+                <div class="input-group-prepend">
+                    <span class="input-group-text">Formation</span>
+                </div>
+                <select id="formation-select" class="form-control">
+                    <option value="3-4-3" selected>3-4-3</option>
+                    <option value="3-5-2">3-5-2</option>
+                    <option value="4-4-2">4-4-2</option>
+                    <option value="4-3-3">4-3-3</option>
+                </select>
+            </div>
             <button id="btn-squad-1" type="button" class="btn btn-success" onclick="showSquad(1)">Squad 1</button>
             <button id="btn-squad-2" type="button" class="btn btn-success" onclick="showSquad(2)">Squad 2</button>
             <button id="btn-squad-3" type="button" class="btn btn-success" onclick="showSquad(3)">Squad 3</button>
@@ -176,23 +186,26 @@
         </div>
         
         <!-- Selection Mode Toggle -->
-        <div class="d-flex align-items-center ml-3">
-            <span class="mr-2 font-weight-bold text-success">ELO</span>
-            <label class="switch mb-0">
-                <input type="checkbox" id="selection-mode-toggle">
-                <span class="slider round"></span>
+        <div class="selection-mode-toggle">
+            <span class="mode-label">ELO</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="selection-mode-toggle" checked>
+                <span class="slider"></span>
             </label>
-            <span class="ml-2 font-weight-bold">Projected Points</span>
+            <span class="mode-label active">Projected Points</span>
         </div>
     </div>
 </nav>
+
 <div id="squad">
-    <h2>Squad <span id="current-squad-number">1</span></h2>
+    <h2>Squad <span id="current-squad-number">1</span> 
+        <small class="text-muted">(<span id="current-mode">Projected Points Mode</span>)</small>
+    </h2>
     <div id="squad-content">
     </div>
 </div>
 
 <script src="{% static 'js/test.js' %}"></script>
-<script src="{% static 'js/squads.js' %}"></script>
+<script src="{% static 'js/squad_points.js' %}"></script>
 
 {% endblock %}

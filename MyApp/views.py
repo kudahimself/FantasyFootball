@@ -40,7 +40,7 @@ def squads(request):
 
 def player_ratings(request):
     """
-    Display all players with their ratings, cost, position, and other details.
+    Display all players with their ratings, cost, position, projected points, and next 3 fixtures.
     Supports filtering and sorting functionality.
     """
     try:
@@ -56,16 +56,57 @@ def player_ratings(request):
             }
             return render(request, 'player_ratings.html', context)
         
+        # Import models for fixtures and projected points
+        from MyApi.models import PlayerFixture, ProjectedPoints
+        
         # Convert to list of dictionaries for template
         players_data = []
         for player in players_queryset:
+            # Get projected points (total for next 4 games)
+            projected_points = 0
+            try:
+                total_projected = ProjectedPoints.get_total_projected_points(player.name, games=4)
+                projected_points = round(total_projected, 1) if total_projected else 0
+            except Exception as e:
+                projected_points = 0
+            
+            # Get next 3 fixtures
+            next_fixtures = []
+            try:
+                fixtures = PlayerFixture.objects.filter(
+                    player_name=player.name
+                ).order_by('gameweek', 'fixture_date')[:3]
+                
+                for fixture in fixtures:
+                    home_away = "vs" if fixture.is_home else "@"
+                    next_fixtures.append({
+                        'text': f"{home_away} {fixture.opponent}",
+                        'difficulty': fixture.difficulty  # 1-5 FPL difficulty rating
+                    })
+            except Exception as e:
+                next_fixtures = [
+                    {'text': "No fixtures", 'difficulty': 3},
+                    {'text': "No fixtures", 'difficulty': 3},
+                    {'text': "No fixtures", 'difficulty': 3}
+                ]
+            
+            # Ensure we have exactly 3 fixtures (pad with "No fixtures" if needed)
+            while len(next_fixtures) < 3:
+                next_fixtures.append({'text': "No fixtures", 'difficulty': 3})
+            
             player_data = {
                 'name': player.name,
                 'position': player.position,
                 'elo': round(float(player.elo), 1),
                 'cost': float(player.cost),
                 'comp': player.competition or 'Premier League',
-                'opponent': 'Unknown'  # You can add this field to the model later if needed
+                'projected_points': projected_points,
+                'fixture_1': next_fixtures[0]['text'],
+                'fixture_1_difficulty': next_fixtures[0]['difficulty'],
+                'fixture_2': next_fixtures[1]['text'],
+                'fixture_2_difficulty': next_fixtures[1]['difficulty'],
+                'fixture_3': next_fixtures[2]['text'],
+                'fixture_3_difficulty': next_fixtures[2]['difficulty'],
             }
             players_data.append(player_data)
         
@@ -1116,11 +1157,52 @@ def get_player_projected_points(request, player_name):
 @csrf_exempt
 def get_all_projected_points(request):
     """
-    API endpoint to get projected points for all players (top performers).
+    API endpoint to get projected points for all players (top performers) or specific player.
+    Supports query parameters: player_name, player_id
     """
     try:
-        from MyApi.models import ProjectedPoints
+        from MyApi.models import ProjectedPoints, Player
         from django.db.models import Sum
+        
+        # Check if specific player is requested
+        player_name = request.GET.get('player_name')
+        player_id = request.GET.get('player_id')
+        
+        if player_name:
+            # Get projected points for specific player by name
+            total_projected = ProjectedPoints.objects.filter(
+                player_name=player_name
+            ).aggregate(
+                total=Sum('adjusted_expected_points')
+            )['total'] or 0
+            
+            return JsonResponse({
+                'success': True,
+                'player_name': player_name,
+                'total_projected_points': round(total_projected, 2)
+            })
+        
+        elif player_id:
+            # Get projected points for specific player by ID
+            try:
+                player = Player.objects.get(id=player_id)
+                total_projected = ProjectedPoints.objects.filter(
+                    player_name=player.name
+                ).aggregate(
+                    total=Sum('adjusted_expected_points')
+                )['total'] or 0
+                
+                return JsonResponse({
+                    'success': True,
+                    'player_id': player_id,
+                    'player_name': player.name,
+                    'total_projected_points': round(total_projected, 2)
+                })
+            except Player.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Player with ID {player_id} not found'
+                })
         
         # Get top players by total projected points for next 4 games
         top_players = (
@@ -1166,3 +1248,235 @@ def get_all_projected_points(request):
     
     except Exception as e:
         return JsonResponse({'success': False, 'error': f'Failed to get all projected points: {str(e)}'})
+
+
+@csrf_exempt
+def generate_squads_points(request):
+    """
+    Generate squads using projected points instead of ELO ratings.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Only POST method allowed'})
+    
+    try:
+        import json
+        from MyApi.models import Player, ProjectedPoints, SystemSettings
+        from django.db.models import Sum
+        
+        data = json.loads(request.body) if request.body else {}
+        formation = data.get('formation', '3-4-3')
+        
+        current_week = SystemSettings.get_current_gameweek()
+        
+        # Get all players with their projected points
+        players_with_projections = []
+        players = Player.objects.filter(week=current_week)
+        
+        for player in players:
+            # Get total projected points for this player
+            total_projected = ProjectedPoints.objects.filter(
+                player_name=player.name
+            ).aggregate(
+                total=Sum('adjusted_expected_points')
+            )['total'] or 0
+            
+            players_with_projections.append({
+                'name': player.name,
+                'position': player.position,
+                'team': player.team,
+                'cost': player.cost,
+                'elo': player.elo,
+                'projected_points': round(total_projected, 1)
+            })
+        
+        # Sort by projected points (descending)
+        players_with_projections.sort(key=lambda x: x['projected_points'], reverse=True)
+        
+        # Generate 4 squads using projected points selection
+        squads_generated = 0
+        for squad_num in range(1, 5):
+            try:
+                squad = generate_single_squad_points(players_with_projections, formation, squad_num)
+                if squad:
+                    # Save squad (you might want to save to database)
+                    squads_generated += 1
+            except Exception as e:
+                print(f"Error generating squad {squad_num}: {e}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Generated {squads_generated} squads using projected points',
+            'squads_created': squads_generated,
+            'formation': formation,
+            'selection_mode': 'projected_points'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Squad generation failed: {str(e)}'})
+
+
+def generate_single_squad_points(players, formation, squad_num):
+    """
+    Generate a single squad using projected points optimization.
+    """
+    # Formation requirements
+    formation_requirements = {
+        '3-4-3': {'Keeper': 1, 'Defender': 3, 'Midfielder': 4, 'Attacker': 3},
+        '3-5-2': {'Keeper': 1, 'Defender': 3, 'Midfielder': 5, 'Attacker': 2},
+        '4-4-2': {'Keeper': 1, 'Defender': 4, 'Midfielder': 4, 'Attacker': 2},
+        '4-3-3': {'Keeper': 1, 'Defender': 4, 'Midfielder': 3, 'Attacker': 3}
+    }
+    
+    requirements = formation_requirements.get(formation, formation_requirements['3-4-3'])
+    budget = 100.0
+    selected_players = []
+    
+    # Separate players by position
+    by_position = {
+        'Keeper': [p for p in players if p['position'] == 'Keeper'],
+        'Defender': [p for p in players if p['position'] == 'Defender'],
+        'Midfielder': [p for p in players if p['position'] == 'Midfielder'],
+        'Attacker': [p for p in players if p['position'] == 'Attacker']
+    }
+    
+    # Select players by position (greedy selection based on projected points per cost)
+    for position, needed in requirements.items():
+        available = [p for p in by_position[position] if p['name'] not in [sp['name'] for sp in selected_players]]
+        
+        # Sort by projected points per cost ratio
+        available.sort(key=lambda x: x['projected_points'] / x['cost'] if x['cost'] > 0 else 0, reverse=True)
+        
+        # Add some variation for different squads
+        start_idx = (squad_num - 1) * 2  # Offset for squad variation
+        
+        for i in range(needed):
+            if start_idx + i < len(available):
+                candidate = available[start_idx + i]
+                if sum(p['cost'] for p in selected_players) + candidate['cost'] <= budget:
+                    selected_players.append(candidate)
+    
+    # Store squad in session/cache (simplified for now)
+    # In a real implementation, you'd save to database
+    global generated_squads_points
+    if 'generated_squads_points' not in globals():
+        generated_squads_points = {}
+    
+    generated_squads_points[squad_num] = {
+        'goalkeepers': [p for p in selected_players if p['position'] == 'Keeper'],
+        'defenders': [p for p in selected_players if p['position'] == 'Defender'],
+        'midfielders': [p for p in selected_players if p['position'] == 'Midfielder'],
+        'forwards': [p for p in selected_players if p['position'] == 'Attacker']
+    }
+    
+    return generated_squads_points[squad_num]
+
+
+def get_squad_points(request, squad_number):
+    """
+    Get a specific squad generated using projected points.
+    """
+    try:
+        global generated_squads_points
+        if 'generated_squads_points' not in globals():
+            return JsonResponse({'success': False, 'error': 'No squads generated yet'})
+        
+        squad = generated_squads_points.get(int(squad_number))
+        if not squad:
+            return JsonResponse({'success': False, 'error': f'Squad {squad_number} not found'})
+        
+        return JsonResponse({
+            'success': True,
+            'squad': squad,
+            'squad_number': squad_number,
+            'selection_mode': 'projected_points'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Failed to get squad: {str(e)}'})
+
+
+def squad_points_page(request):
+    """
+    Render the squad points page.
+    """
+    return render(request, 'squad_points.html')
+
+
+# TEST FUNCTIONS FOR SUBSTITUTE RECOMMENDATIONS - DO NOT AFFECT EXISTING FUNCTIONALITY
+
+@csrf_exempt
+def test_recommend_substitutes(request):
+    """
+    TEST ENDPOINT: Recommend substitutes using projected points optimization.
+    This is a test function that doesn't affect existing functionality.
+    """
+    try:
+        from MyApi.utils.recommend_substitutes import recommend_substitutes_test
+        
+        # Get parameters from request
+        data = json.loads(request.body) if request.body else {}
+        max_recommendations = data.get('max_recommendations', 4)
+        budget_constraint = data.get('budget_constraint', 100.0)
+        
+        # Get recommendations
+        result = recommend_substitutes_test(max_recommendations, budget_constraint)
+        
+        return JsonResponse(result)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False, 
+            'error': f'Test substitute recommendation failed: {str(e)}'
+        })
+
+
+@csrf_exempt 
+def test_analyze_squad_weaknesses(request):
+    """
+    TEST ENDPOINT: Analyze current squad weaknesses.
+    This is a test function that doesn't affect existing functionality.
+    """
+    try:
+        from MyApi.utils.recommend_substitutes import analyze_squad_weaknesses_test
+        
+        # Analyze current squad
+        result = analyze_squad_weaknesses_test()
+        
+        return JsonResponse(result)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Test squad analysis failed: {str(e)}'
+        })
+
+
+@csrf_exempt
+def test_simulate_substitutions(request):
+    """
+    TEST ENDPOINT: Simulate the impact of proposed substitutions.
+    This is a test function that doesn't affect existing functionality.
+    """
+    try:
+        from MyApi.utils.recommend_substitutes import simulate_substitution_impact_test
+        
+        # Get substitutions from request
+        data = json.loads(request.body) if request.body else {}
+        substitutions = data.get('substitutions', [])
+        
+        if not substitutions:
+            return JsonResponse({
+                'success': False,
+                'error': 'No substitutions provided for simulation'
+            })
+        
+        # Simulate substitutions
+        result = simulate_substitution_impact_test(substitutions)
+        
+        return JsonResponse(result)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Test substitution simulation failed: {str(e)}'
+        })

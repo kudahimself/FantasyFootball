@@ -3,6 +3,20 @@
 let fantasysquads = [];
 let lastFormationInfo = null; // { formation: '3-4-3', counts: { keeper, defender, midfielder, attacker } }
 
+// Add event listener for page-based navigation toggle
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle event listener - redirect to Projected Points page
+    const toggle = document.getElementById('selection-mode-toggle');
+    if (toggle) {
+        toggle.addEventListener('change', function() {
+            if (this.checked) {
+                // Redirect to projected points squads page
+                window.location.href = '/squad_points/';
+            }
+        });
+    }
+});
+
 // This function now handles both fetching and displaying the initial squad.
 function generateAndDisplaySquads() {
     // Read selected formation (fallback to 3-4-3 if not present)

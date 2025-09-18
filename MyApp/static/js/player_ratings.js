@@ -21,7 +21,7 @@ function sortTable(column, type, forcedDirection = null) {
         currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
     } else {
         // Default direction for different columns
-        if (column === 'elo' || column === 'cost') {
+        if (column === 'elo' || column === 'cost' || column === 'projectedPoints') {
             currentSort.direction = 'desc'; // Highest first for numeric values
         } else {
             currentSort.direction = 'asc'; // A-Z for text values
@@ -74,6 +74,7 @@ function filterTable() {
     const costMin = parseFloat(document.getElementById('filter-cost-min').value) || 0;
     const costMax = parseFloat(document.getElementById('filter-cost-max').value) || 999;
     const eloMin = parseFloat(document.getElementById('filter-elo-min').value) || 0;
+    const pointsMin = parseFloat(document.getElementById('filter-points-min').value) || 0;
     
     const rows = document.querySelectorAll('#players-tbody tr.player-row');
     let visibleCount = 0;
@@ -83,13 +84,15 @@ function filterTable() {
         const position = row.dataset.position;
         const cost = parseFloat(row.dataset.cost);
         const elo = parseFloat(row.dataset.elo);
+        const projectedPoints = parseFloat(row.dataset.projectedPoints) || 0;
         
         const matchesSearch = !searchText || name.includes(searchText);
         const matchesPosition = !positionFilter || position === positionFilter;
         const matchesCost = cost >= costMin && cost <= costMax;
         const matchesElo = elo >= eloMin;
+        const matchesPoints = projectedPoints >= pointsMin;
         
-        const shouldShow = matchesSearch && matchesPosition && matchesCost && matchesElo;
+        const shouldShow = matchesSearch && matchesPosition && matchesCost && matchesElo && matchesPoints;
         
         row.style.display = shouldShow ? '' : 'none';
         if (shouldShow) visibleCount++;
@@ -115,6 +118,7 @@ function clearFilters() {
     document.getElementById('filter-cost-min').value = '';
     document.getElementById('filter-cost-max').value = '';
     document.getElementById('filter-elo-min').value = '';
+    document.getElementById('filter-points-min').value = '';
     filterTable();
 }
 
@@ -135,6 +139,7 @@ function initializeEventListeners() {
     document.getElementById('filter-cost-min').addEventListener('input', filterTable);
     document.getElementById('filter-cost-max').addEventListener('input', filterTable);
     document.getElementById('filter-elo-min').addEventListener('input', filterTable);
+    document.getElementById('filter-points-min').addEventListener('input', filterTable);
 }
 
 /**
@@ -143,10 +148,10 @@ function initializeEventListeners() {
 function initializePlayerRatings() {
     initializeEventListeners();
     
-    // Initial sort by Elo (highest first) - force descending order
-    sortTable('elo', 'number', 'desc');
+    // Initial sort by Projected Points (highest first) - force descending order
+    sortTable('projectedPoints', 'number', 'desc');
     
-    console.log('Player Ratings page initialized - sorted by Elo (highest to lowest)');
+    console.log('Player Ratings page initialized - sorted by Projected Points (highest to lowest)');
 }
 
 // Initialize when DOM is loaded

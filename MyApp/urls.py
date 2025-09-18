@@ -28,6 +28,14 @@ urlpatterns = [
     path('api/calculate_projected_points/', views.calculate_projected_points, name='calculate_projected_points'),
     path('api/projected_points/<str:player_name>/', views.get_player_projected_points, name='get_player_projected_points'),
     path('api/all_projected_points/', views.get_all_projected_points, name='get_all_projected_points'),
+    # Squad Points API endpoints
+    path('squad_points/', views.squad_points_page, name='squad_points'),
+    path('api/generate_squads_points/', views.generate_squads_points, name='generate_squads_points'),
+    path('api/squad_points/<int:squad_number>/', views.get_squad_points, name='get_squad_points'),
     # Removed old optimized methods - now using only the player-by-player approach
     path('api/system_info/', views.system_info, name='system_info'),
+    # TEST ENDPOINTS for substitute recommendations (do not affect existing functionality)
+    path('api/test/recommend_substitutes/', views.test_recommend_substitutes, name='test_recommend_substitutes'),
+    path('api/test/analyze_squad/', views.test_analyze_squad_weaknesses, name='test_analyze_squad_weaknesses'),
+    path('api/test/simulate_substitutions/', views.test_simulate_substitutions, name='test_simulate_substitutions'),
 ]

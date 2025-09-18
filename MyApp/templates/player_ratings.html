@@ -54,6 +54,11 @@
             <input type="number" id="filter-elo-min" class="form-control" placeholder="1000" step="50">
         </div>
         
+        <div class="filter-group">
+            <label for="filter-points-min">Min Projected Points:</label>
+            <input type="number" id="filter-points-min" class="form-control" placeholder="0" step="1" min="0">
+        </div>
+        
         <div class="filter-group" style="justify-content: flex-end;">
             <label>&nbsp;</label>
             <button class="btn-clear" onclick="clearFilters()">Clear All</button>
@@ -70,8 +75,8 @@
                 <th class="sortable" data-column="position" data-type="string">Position</th>
                 <th class="sortable" data-column="elo" data-type="number">Elo Rating</th>
                 <th class="sortable" data-column="cost" data-type="number">Cost (£m)</th>
-                <th class="sortable" data-column="comp" data-type="string">Competition</th>
-                <th class="sortable" data-column="opponent" data-type="string">Next Opponent</th>
+                <th class="sortable" data-column="projectedPoints" data-type="number">Projected Points</th>
+                <th class="sortable" data-column="fixture_1" data-type="string">Next 3 Fixtures</th>
             </tr>
         </thead>
         <tbody id="players-tbody">
@@ -81,8 +86,10 @@
                 data-position="{{ player.position }}"
                 data-elo="{{ player.elo }}"
                 data-cost="{{ player.cost }}"
-                data-comp="{{ player.comp }}"
-                data-opponent="{{ player.opponent }}">
+                data-projected-points="{{ player.projected_points }}"
+                data-fixture-1="{{ player.fixture_1 }}"
+                data-fixture-2="{{ player.fixture_2 }}"
+                data-fixture-3="{{ player.fixture_3 }}">
                 
                 <td>
                     <strong>
@@ -115,8 +122,19 @@
                     </span>
                 </td>
                 
-                <td>{{ player.comp }}</td>
-                <td>{{ player.opponent }}</td>
+                <td>
+                    <span class="{% if player.projected_points >= 25 %}points-high{% elif player.projected_points >= 15 %}points-medium{% else %}points-low{% endif %}">
+                        {{ player.projected_points }}
+                    </span>
+                </td>
+                
+                <td class="fixtures-cell">
+                    <div class="fixtures-container">
+                        <div class="fixture difficulty-{{ player.fixture_1_difficulty }}">{{ player.fixture_1 }}</div>
+                        <div class="fixture difficulty-{{ player.fixture_2_difficulty }}">{{ player.fixture_2 }}</div>
+                        <div class="fixture difficulty-{{ player.fixture_3_difficulty }}">{{ player.fixture_3 }}</div>
+                    </div>
+                </td>
             </tr>
             {% empty %}
             <tr>

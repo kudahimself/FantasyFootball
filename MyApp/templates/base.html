@@ -25,7 +25,10 @@
             <a class="nav-link" href="{% url 'team_selection' %}">Team Selection</a>
           </li>
           <li class="nav-item{% if request.resolver_match.url_name == 'squads' %} active{% endif %}">
-            <a class="nav-link" href="{% url 'squads' %}">Squads</a>
+            <a class="nav-link" href="{% url 'squads' %}">Squads (ELO)</a>
+          </li>
+          <li class="nav-item{% if request.resolver_match.url_name == 'squad_points' %} active{% endif %}">
+            <a class="nav-link" href="{% url 'squad_points' %}">Squads (Points)</a>
           </li>
           <li class="nav-item{% if request.resolver_match.url_name == 'player_ratings' %} active{% endif %}">
             <a class="nav-link" href="{% url 'player_ratings' %}">Player Ratings</a>
