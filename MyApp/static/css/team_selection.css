@@ -57,10 +57,15 @@
     padding: 6px 12px;
     background: #f8f9fa;
     border: 1px solid #dee2e6;
-    border-radius: 20px;
+    border-radius: 999px;
     cursor: pointer;
     font-size: 0.8em;
     transition: all 0.2s;
+}
+
+.position-tab.defender {
+    background: #c5b415;
+    color: white;
 }
 
 .position-tab.active {
@@ -197,6 +202,31 @@
 }
 
 .add-btn:disabled {
+    background: #6c757d;
+    border-color: #6c757d;
+    color: white;
+    cursor: not-allowed;
+}
+
+.remove-btn {
+    padding: 4px 12px;
+    border: 1px solid #dc3545; /* Bootstrap red */
+    background: white;
+    color: #dc3545;
+    border-radius: 4px;
+    font-size: 0.8em;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-left: 10px;
+    min-width: 60px;
+}
+
+.remove-btn:hover {
+    background: #dc3545;
+    color: white;
+}
+
+.remove-btn:disabled {
     background: #6c757d;
     border-color: #6c757d;
     color: white;
