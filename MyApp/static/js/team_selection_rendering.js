@@ -1,3 +1,51 @@
+// Discard local changes and revert to last loaded squad
+function discardLocalChanges() {
+    if (window.currentSquadData && window.serverPlayers) {
+        // Deep copy to avoid reference issues
+        window.currentSquad = JSON.parse(JSON.stringify(window.currentSquadData));
+
+        // Rebuild window.localTeam from the reverted squad
+        window.localTeam = [];
+        const positionMapping = {
+            'goalkeepers': 'GKP',
+            'defenders': 'DEF',
+            'midfielders': 'MID',
+            'forwards': 'FWD'
+        };
+        Object.keys(positionMapping).forEach(dbPosition => {
+            const players = window.currentSquad[dbPosition] || [];
+            players.forEach(playerEntry => {
+                let playerName = typeof playerEntry === 'string' ? playerEntry : playerEntry.name;
+                if (!playerName) return;
+                const playerMatch = window.serverPlayers.find(p => p.name === playerName);
+                if (playerMatch) {
+                    const expectedPosition = positionMapping[dbPosition];
+                    if (playerMatch.position === expectedPosition) {
+                        window.localTeam.push(playerMatch);
+                    } else {
+                        const correctedPlayer = { ...playerMatch, position: expectedPosition };
+                        window.localTeam.push(correctedPlayer);
+                    }
+                }
+            });
+        });
+        // Remove any undefined/null entries just in case
+        window.localTeam = window.localTeam.filter(Boolean);
+
+        // Update all squad-related UI
+        if (typeof updateSquadBadges === 'function') updateSquadBadges();
+        if (typeof updateSquadDisplay === 'function') updateSquadDisplay();
+        if (typeof displayCurrentSquad === 'function') displayCurrentSquad();
+
+        if (typeof showStatusMessage === 'function') {
+            showStatusMessage('Changes discarded. Squad reverted to last loaded state.', 'success');
+        }
+    } else {
+        if (typeof showStatusMessage === 'function') {
+            showStatusMessage('No previous squad data to revert to.', 'error');
+        }
+    }
+}
 // Update squad display function (uses localTeam)
 function updateSquadDisplay() {
     const squadContent = document.getElementById('squad-content');
@@ -276,3 +324,4 @@ function displayCurrentSquad() {
         }
     });
 }
+

@@ -346,8 +346,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 card.style.display = 'none';
             }
         });
-
-        playerCounter.textContent = `${visibleCount} of {{ total_players }} players shown`;
+        // Count only cards that are currently visible in the DOM
+        const visibleCards = document.querySelectorAll('.player-card:not([style*="display: none"])');
+        const totalVisible = visibleCards.length;
+        const totalCards = document.querySelectorAll('.player-card').length;
+        playerCounter.textContent = `${totalVisible} of ${totalCards} players shown`;
     }
 
     searchInput.addEventListener('input', filterAndRender);
