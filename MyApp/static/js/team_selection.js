@@ -1,11 +1,54 @@
-// Team Selection JavaScript for managing current squad
-console.log("team_selection.js loaded successfully");
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ DOM loaded, setting up dynamic player search...');
+    
+    // Ensure allPlayers is populated for addPlayer function
+    if (typeof window.serverPlayers !== 'undefined' && Array.isArray(window.serverPlayers)) {
+        dynamicAllPlayers = window.serverPlayers;
+        window.dynamicAllPlayers = dynamicAllPlayers;
+        console.log(`✅ Global dynamicAllPlayers populated with ${dynamicAllPlayers.length} players`);
+    }
+    
+    
+    // Initialize with server data instead of API call
+    initializeWithServerData();
+    
+    // Setup search input
+    const searchInput = document.getElementById('player-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', handleSearch);
+        searchInput.addEventListener('focus', function() {
+            if (this.value.length >= 2) {
+                handleSearch();
+            }
+        });
+        console.log('✅ Search input setup complete');
+    }
+    
+    // Setup position tabs
+    setupPositionTabs();
+    console.log('✅ Position tabs setup complete');
+    
+    // Setup reset button
+    const resetBtn = document.getElementById('reset-filters-btn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', resetFilters);
+        console.log('✅ Reset button setup complete');
+    }
+    
+    console.log('🎉 Dynamic player search functionality ready!');
+});
 
-let currentSquad = {};
-let allPlayers = {};
-let allPlayersFlat = []; // Flat array for search
+// Dynamic search functionality
+function handleSearch() {
+    const searchInput = document.getElementById('player-search');
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    
+    console.log('🔍 Searching for:', searchTerm);
+    // Filter players based on search term
+    filterPlayers(searchTerm);
+}
 
-// Load all available players from the server
 function loadAllPlayers() {
     console.log("Loading all available players from server...");
     
@@ -199,151 +242,7 @@ document.addEventListener('click', function(event) {
     }
 });
 
-// Load players for the selected position into the dropdown (legacy function for compatibility)
-function loadPlayersForPosition() {
-    // This function is kept for backward compatibility but is no longer needed
-    // The intelligent search handles all filtering
-    updatePlayerSearch();
-}
 
-// Load the current squad from the server
-function loadCurrentSquad() {
-    console.log("Loading current squad from server...");
-    
-    fetch('/api/current_squad/')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            currentSquad = data.current_squad;
-            console.log("Current squad loaded:", currentSquad);
-            displayCurrentSquad();
-            
-            // Refresh the player selection pane if it exists
-            if (typeof refreshPlayerPane === 'function') {
-                refreshPlayerPane();
-            }
-        })
-        .catch(error => {
-            console.error('Error loading current squad:', error);
-            showStatusMessage('Error loading squad. Please try again.', 'error');
-        });
-}
-
-// Display the current squad using the formation layout
-function displayCurrentSquad() {
-    console.log('displayCurrentSquad called, currentSquad:', currentSquad);
-    const squadContent = document.getElementById("squad-content");
-    if (Object.keys(currentSquad).length === 0) {
-        squadContent.innerHTML = `<p>No squad data available.</p>`;
-        return;
-    }
-
-    // Define the order and display names for positions
-    const positionOrder = [
-        { key: 'goalkeepers', label: 'GK' },
-        { key: 'defenders', label: 'DEF' },
-        { key: 'midfielders', label: 'MID' },
-        { key: 'forwards', label: 'FWD' }
-    ];
-
-    squadContent.innerHTML = '';
-
-    // Flatten squad to a single array for display
-    const flatSquad = [];
-        positionOrder.forEach(pos => {
-            const players = currentSquad[pos.key] || [];
-            // Add heading for the position
-            const heading = document.createElement('div');
-            heading.textContent = pos.label;
-            heading.className = 'position-header';
-            squadContent.appendChild(heading);
-
-            if (players.length === 0) {
-                const empty = document.createElement('div');
-                empty.textContent = `No ${pos.label}`;
-                empty.style.color = '#888';
-                empty.style.padding = '8px 20px';
-                squadContent.appendChild(empty);
-            } else {
-                players.forEach(player => {
-                    // Use the same HTML structure as the player selection pane
-                    const card = document.createElement('div');
-                    card.className = 'player-card';
-                    card.setAttribute('data-name', (player.name || '').toLowerCase());
-                    card.setAttribute('data-team', (player.team || '').toLowerCase());
-                    card.setAttribute('data-position', pos.label);
-
-                    // .player-info
-                    const info = document.createElement('div');
-                    info.className = 'player-info';
-
-                    // .player-name
-                    const name = document.createElement('div');
-                    name.className = 'player-name';
-                    name.textContent = player.name + ' ';
-                    // Add badge for position (match template logic)
-                    const badge = document.createElement('span');
-                    badge.className = 'badge ms-2';
-                    if (pos.label === 'GK') badge.classList.add('bg-warning', 'text-dark');
-                    if (pos.label === 'DEF') badge.classList.add('bg-primary');
-                    if (pos.label === 'MID') badge.classList.add('bg-success');
-                    if (pos.label === 'FWD') badge.classList.add('bg-danger');
-                    badge.textContent = pos.label;
-                    name.appendChild(badge);
-                    info.appendChild(name);
-
-                    // .player-team
-                    const team = document.createElement('div');
-                    team.className = 'player-team';
-                    team.textContent = '\ud83d\udccd ' + (player.team || '');
-                    info.appendChild(team);
-
-                    card.appendChild(info);
-
-                    // .player-stats
-                    const stats = document.createElement('div');
-                    stats.className = 'player-stats';
-
-                    // .player-price
-                    const price = document.createElement('div');
-                    price.className = 'player-price';
-                    price.textContent = player.cost !== undefined ? `£${player.cost}m` : '';
-                    stats.appendChild(price);
-
-                    // .player-points (ELO)
-                    const points = document.createElement('div');
-                    points.className = 'player-points';
-                    points.textContent = player.elo !== undefined ? `📊 ${player.elo_rating !== undefined ? player.elo_rating : player.elo.toFixed(1)}` : '';
-                    stats.appendChild(points);
-
-                    // .player-projected (projected points)
-                    const proj = document.createElement('div');
-                    proj.className = 'player-projected';
-                    if (player.projected_points !== undefined) {
-                        proj.textContent = `⭐ ${player.projected_points}pts`;
-                    } else {
-                        proj.textContent = '';
-                    }
-                    stats.appendChild(proj);
-
-                    card.appendChild(stats);
-
-                    // Remove button (styled like add-btn)
-                    const removeButton = document.createElement('button');
-                    removeButton.textContent = '×';
-                    removeButton.className = 'add-btn';
-                    removeButton.onclick = () => removePlayerFromSquad(pos.key, player.name);
-                    card.appendChild(removeButton);
-
-                    squadContent.appendChild(card);
-                });
-            }
-        });
-}
 // Generate formation grid (reused from squads.js but adapted for current squad)
 
 // Generate formation grid (reused from squads.js but adapted for current squad)
@@ -360,123 +259,6 @@ function getPositionKey(label) {
     return labelMap[label];
 }
 
-// Add the selected player to the squad
-function addSelectedPlayerToSquad() {
-    if (!selectedPlayer) {
-        showStatusMessage('Please search and select a player first.', 'error');
-        return;
-    }
-
-    // Count total players in the current squad
-    let totalPlayers = 0;
-    if (currentSquad && typeof currentSquad === 'object') {
-        ['goalkeepers', 'defenders', 'midfielders', 'forwards'].forEach(pos => {
-            if (Array.isArray(currentSquad[pos])) {
-                totalPlayers += currentSquad[pos].length;
-            }
-        });
-    }
-    if (totalPlayers >= 11) {
-        showStatusMessage('You cannot have more than 11 players in your squad.', 'error');
-        return;
-    }
-
-    const playerName = selectedPlayer.name;
-    const position = selectedPlayer.position;
-
-    console.log(`Adding ${playerName} (${position}) to squad...`);
-
-    fetch('/api/add-player/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
-        },
-        body: JSON.stringify({
-            position: position,
-            player_name: playerName
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            showStatusMessage(data.error, 'error');
-        } else {
-            // Optionally show a subtle info message, or comment out to show nothing
-            // showStatusMessage(data.message, 'info');
-            currentSquad = data.squad;
-            displayCurrentSquad();
-
-            // Reset the search elements if they exist
-            const searchInput = document.getElementById('player-search-input');
-            const playerInfo = document.getElementById('player-info');
-            const searchResults = document.getElementById('player-search-results');
-
-            if (searchInput) {
-                searchInput.value = '';
-            }
-            if (playerInfo) {
-                playerInfo.innerHTML = '';
-            }
-            if (searchResults) {
-                searchResults.style.display = 'none';
-            }
-
-            selectedPlayer = null;
-
-            // Refresh the player selection pane if it exists
-            if (typeof refreshPlayerPane === 'function') {
-                refreshPlayerPane();
-            }
-        }
-    })
-    .catch(error => {
-        console.error('Error adding player:', error);
-        showStatusMessage('Error adding player. Please try again.', 'error');
-    });
-}
-
-// Remove a player from the squad
-function removePlayerFromSquad(position, playerName) {
-    console.log(`Removing ${playerName} from ${position} (local-only, mirror addPlayer)...`);
-
-    try {
-        // Ensure localTeam exists
-        if (!window.localTeam || !Array.isArray(window.localTeam)) {
-            window.localTeam = [];
-        }
-
-        // Find index by name (calls to this function pass name)
-        const idx = window.localTeam.findIndex(p => p.name === playerName || String(p.id) === String(playerName));
-        if (idx === -1) {
-            console.warn('Player not found in localTeam:', playerName);
-            alert(`${playerName} was not in your local team.`);
-            return;
-        }
-
-        const removed = window.localTeam.splice(idx, 1)[0];
-
-        // Use the same render flow as addPlayer
-        if (typeof updateSquadBadges === 'function') updateSquadBadges();
-        if (typeof updateSquadDisplay === 'function') updateSquadDisplay();
-        // Re-render dynamic players list if present
-        if (typeof renderPlayers === 'function') renderPlayers();
-        if (typeof refreshPlayerPane === 'function') refreshPlayerPane();
-
-        // Focus search input and scroll to player list for consistent UX
-        const searchInput = document.getElementById('player-search');
-        if (searchInput) searchInput.focus();
-        const playersList = document.getElementById('players-list');
-        if (playersList) playersList.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-        // Show the same alert style as addPlayer
-        alert(`✅ Removed ${removed.name} from your team!`);
-        console.log(`✅ Locally removed ${removed.name}. localTeam size: ${window.localTeam.length}`);
-    } catch (err) {
-        console.error('Error in local removePlayerFromSquad:', err);
-        showStatusMessage('Error removing player locally. See console for details.', 'error');
-    }
-}
 
 // Show status messages
 function showStatusMessage(message, type) {
@@ -518,22 +300,13 @@ function getCsrfToken() {
     return '';
 }
 
-// Load squad and players when page loads
-window.onload = function() {
-    console.log('Page loaded, initializing...');
-    loadCurrentSquad();
-    loadAllPlayers();
-    // Load recommendations after squad is loaded
-    setTimeout(function() {
-        loadSubstituteRecommendations();
-    }, 2000);
-};
+
 
 // Also try with DOMContentLoaded as backup
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, initializing...');
     setTimeout(function() {
-        loadCurrentSquad();
+        loadCurrentSquadFromDatabase();
         loadAllPlayers();
         // Load recommendations after squad is loaded
         setTimeout(function() {
@@ -544,423 +317,297 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // SUBSTITUTE RECOMMENDATIONS FUNCTIONALITY
 
-let recommendationsVisible = true;
 
-function loadSubstituteRecommendations() {
-    console.log('Loading substitute recommendations...');
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('player-search');
+    const positionTabs = document.querySelectorAll('.position-tab');
+    const playerCards = document.querySelectorAll('.player-card');
+    const playerCounter = document.getElementById('player-counter');
+    const resetBtn = document.getElementById('reset-filters-btn');
+
+    let currentPositionFilter = 'all';
+
+    function filterAndRender() {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        let visibleCount = 0;
+
+        playerCards.forEach(card => {
+            const name = card.dataset.name || '';
+            const team = card.dataset.team || '';
+            const playerPosition = card.getAttribute('data-position') || ''; // More direct attribute access
+
+            const matchesSearch = searchTerm === '' || name.includes(searchTerm) || team.includes(searchTerm);
+            const matchesPosition = currentPositionFilter === 'all' || playerPosition === currentPositionFilter;
+
+            if (matchesSearch && matchesPosition) {
+                card.style.display = 'flex';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        playerCounter.textContent = `${visibleCount} of {{ total_players }} players shown`;
+    }
+
+    searchInput.addEventListener('input', filterAndRender);
+
+    positionTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            positionTabs.forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            currentPositionFilter = this.dataset.position;
+            filterAndRender();
+        });
+    });
+
+    resetBtn.addEventListener('click', function() {
+        searchInput.value = '';
+        positionTabs.forEach(t => t.classList.remove('active'));
+        document.querySelector('.position-tab[data-position="all"]').classList.add('active');
+        currentPositionFilter = 'all';
+        filterAndRender();
+    });
     
-    // Show loading state
-    document.getElementById('recommendations-loading').style.display = 'block';
-    document.getElementById('recommendations-empty').style.display = 'none';
-    document.getElementById('recommendations-list').style.display = 'none';
-    document.getElementById('recommendations-error').style.display = 'none';
+
     
-    fetch('/api/test/recommend_substitutes/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
-        },
-        body: JSON.stringify({
-            max_recommendations: 4,
-            budget_constraint: 82.5
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        document.getElementById('recommendations-loading').style.display = 'none';
-        
-        if (data.success) {
-            displaySubstituteRecommendations(data);
-        } else {
-            showRecommendationsError(data.error || 'Failed to get recommendations');
+    // Load player data for team management
+    if (typeof window.serverPlayers === 'undefined' && document.querySelector('script')) {
+        // Try to get server data from the second script block
+        const scripts = document.querySelectorAll('script');
+        for (let script of scripts) {
+            if (script.textContent && script.textContent.includes('serverPlayers')) {
+                // Data will be loaded by the second script
+                break;
+            }
         }
-    })
-    .catch(error => {
-        console.error('Error loading recommendations:', error);
-        document.getElementById('recommendations-loading').style.display = 'none';
-        showRecommendationsError('Network error while loading recommendations');
-    });
-}
-
-function displaySubstituteRecommendations(data) {
-    // Show recommendations list
-    document.getElementById('recommendations-list').style.display = 'block';
-    
-    // Store current recommendations package globally
-    currentRecommendationPackage = data.recommended_substitutes || [];
-    
-    // Update summary with package information
-    const summaryElement = document.getElementById('recommendations-summary');
-    const totalCostUsed = data.current_total_cost + (data.total_cost_change || 0);
-    
-    summaryElement.innerHTML = `
-        <div class="row">
-            <div class="col-md-2">
-                <strong>Current Points:</strong> ${data.current_total_points}
-            </div>
-            <div class="col-md-3">
-                <strong>Package Improvement:</strong> <span class="text-success">+${data.total_potential_improvement}</span>
-            </div>
-            <div class="col-md-3">
-                <strong>Projected Total:</strong> ${data.projected_new_total}
-            </div>
-            <div class="col-md-2">
-                <strong>Budget Used:</strong> £${totalCostUsed.toFixed(1)}m
-            </div>
-            <div class="col-md-2">
-                <strong>Substitutions:</strong> ${data.number_of_recommendations}
-            </div>
-        </div>
-        <div class="row mt-2">
-            <div class="col-12">
-                <div class="alert alert-info mb-0">
-                    <i class="fas fa-lightbulb"></i>
-                    <strong>Optimized Package:</strong> This recommendation uses linear programming to find the best combination of ${data.number_of_recommendations} substitutions that maximizes your points within the £82.5 budget.
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Clear and populate recommendations cards
-    const cardsContainer = document.getElementById('recommendations-cards');
-    cardsContainer.innerHTML = '';
-    
-    if (data.recommended_substitutes && data.recommended_substitutes.length > 0) {
-        // Create a single card with all transfers
-        const transfersCardHtml = createCombinedTransfersCard(data.recommended_substitutes, data.total_potential_improvement);
-        cardsContainer.innerHTML += transfersCardHtml;
-    } else {
-        cardsContainer.innerHTML = `
-            <div class="col-12">
-                <div class="alert alert-info text-center">
-                    <i class="fas fa-check-circle"></i>
-                    Your squad is already optimized! No improvements found within budget constraints.
-                </div>
-            </div>
-        `;
     }
-}
+});
 
-function createCombinedTransfersCard(recommendations, totalImprovement) {
-    let transfersHtml = '';
-    
-    recommendations.forEach((rec, index) => {
-        const current = rec.current_player;
-        const substitute = rec.substitute;
-        const improvement = rec.improvement;
-        const costDiff = rec.cost_difference;
-        const position = rec.position;
-        
-        const costColor = costDiff > 0 ? 'text-danger' : costDiff < 0 ? 'text-success' : 'text-muted';
-        const costSign = costDiff > 0 ? '+' : '';
-        
-        transfersHtml += `
-            <div class="row align-items-center mb-2 pb-2 ${index < recommendations.length - 1 ? 'border-bottom' : ''}">
-                <div class="col-md-5">
-                    <div class="d-flex align-items-center">
-                        <div class="text-danger mr-2">
-                            <i class="fas fa-minus-circle"></i>
-                        </div>
-                        <div>
-                            <div class="font-weight-bold" style="font-size: 0.85em;">${current.name}</div>
-                            <small class="text-muted" style="font-size: 0.7em;">${current.team} • ${current.projected_points} pts • £${current.cost}m</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-2 text-center">
-                    <i class="fas fa-arrow-right text-primary"></i>
-                </div>
-                <div class="col-md-5">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center">
-                            <div class="text-success mr-2">
-                                <i class="fas fa-plus-circle"></i>
-                            </div>
-                            <div>
-                                <div class="font-weight-bold" style="font-size: 0.85em;">${substitute.name}</div>
-                                <small class="text-muted" style="font-size: 0.7em;">${substitute.team} • ${substitute.projected_points} pts • £${substitute.cost}m</small>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <div class="badge badge-success" style="font-size: 0.7em;">+${improvement} pts</div>
-                            <div><small class="${costColor}" style="font-size: 0.65em;">${costSign}£${Math.abs(costDiff)}m</small></div>
-                            <button class="btn btn-xs btn-outline-primary mt-1 py-0 px-1" style="font-size: 0.65em;"
-                                    onclick="makeSubstitution('${current.name}', '${substitute.name}', '${position}')"
-                                    title="Make this substitution">
-                                <i class="fas fa-exchange-alt"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-    
-    return `
-        <div class="col-12 mb-3">
-            <div class="card border-success">
-                <div class="card-header bg-success text-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="fas fa-exchange-alt"></i>
-                            Recommended Transfers
-                        </h5>
-                        <span class="badge badge-light text-success">
-                            Total: +${totalImprovement} pts
-                        </span>
-                    </div>
-                </div>
-                <div class="card-body py-2">
-                    ${transfersHtml}
-                </div>
-            </div>
-        </div>
-    `;
-}
 
-function createRecommendationCard(recommendation, index, isPackage = false) {
-    const current = recommendation.current_player;
-    const substitute = recommendation.substitute;
-    const improvement = recommendation.improvement;
-    const costDiff = recommendation.cost_difference;
-    const position = recommendation.position;
-    
-    const costColor = costDiff > 0 ? 'text-danger' : costDiff < 0 ? 'text-success' : 'text-muted';
-    const costSign = costDiff > 0 ? '+' : '';
-    
-    const packageNote = isPackage ? `
-        <div class="badge badge-success mb-1" style="font-size: 0.7em;">
-            <i class="fas fa-puzzle-piece"></i> Part ${index + 1}
-        </div>
-    ` : '';
-    
-    return `
-        <div class="col-md-6 mb-2">
-            <div class="card h-100 ${isPackage ? 'border-success' : 'border-left-primary'}" style="${isPackage ? 'border: 2px solid #28a745;' : 'border-left: 4px solid #007bff;'}">
-                <div class="card-body py-2 px-3">
-                    ${packageNote}
-                    <div class="d-flex justify-content-between align-items-start mb-1">
-                        <h6 class="card-title mb-0" style="font-size: 0.9em;">
-                            <i class="fas fa-arrow-right ${isPackage ? 'text-success' : 'text-primary'}"></i>
-                            ${position.charAt(0).toUpperCase() + position.slice(1)} ${isPackage ? 'Swap' : 'Upgrade'}
-                        </h6>
-                        <span class="badge ${isPackage ? 'badge-success' : 'badge-primary'}" style="font-size: 0.7em;">+${improvement} pts</span>
-                    </div>
-                    
-                    <div class="mb-1">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <small class="text-muted" style="font-size: 0.7em;">Out:</small>
-                            <small class="text-muted" style="font-size: 0.7em;">${current.projected_points} pts • £${current.cost}m</small>
-                        </div>
-                        <div class="font-weight-bold text-danger" style="font-size: 0.85em;">
-                            <i class="fas fa-minus-circle"></i> ${current.name}
-                        </div>
-                        <small class="text-muted" style="font-size: 0.7em;">${current.team}</small>
-                    </div>
-                    
-                    <div class="text-center mb-1">
-                        <i class="fas fa-arrow-down ${isPackage ? 'text-success' : 'text-primary'}" style="font-size: 0.9em;"></i>
-                    </div>
-                    
-                    <div class="mb-2">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <small class="text-muted" style="font-size: 0.7em;">In:</small>
-                            <small class="text-muted" style="font-size: 0.7em;">${substitute.projected_points} pts • £${substitute.cost}m</small>
-                        </div>
-                        <div class="font-weight-bold text-success" style="font-size: 0.85em;">
-                            <i class="fas fa-plus-circle"></i> ${substitute.name}
-                        </div>
-                        <small class="text-muted" style="font-size: 0.7em;">${substitute.team}</small>
-                    </div>
-                    
-                    <div class="d-flex justify-content-between align-items-center">
-                        <small class="text-muted" style="font-size: 0.7em;">
-                            Cost: <span class="${costColor}">${costSign}£${Math.abs(costDiff)}m</span>
-                        </small>
-                        ${!isPackage ? `
-                            <button class="btn btn-sm btn-outline-primary py-1 px-2" style="font-size: 0.7em;"
-                                    onclick="makeSubstitution('${current.name}', '${substitute.name}', '${position}')"
-                                    title="Make this substitution">
-                                <i class="fas fa-exchange-alt"></i> Swap
-                            </button>
-                        ` : `
-                            <span class="badge badge-light" style="font-size: 0.65em;">
-                                <i class="fas fa-box"></i> Package
-                            </span>
-                        `}
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-// Global variable to store current recommendations for package application
-let currentRecommendationPackage = [];
-
-function applyCompletePackage() {
-    if (!currentRecommendationPackage || currentRecommendationPackage.length === 0) {
-        showStatusMessage('No package recommendations available', 'error');
-        return;
-    }
-    
-    const substitutionCount = currentRecommendationPackage.length;
-    const totalImprovement = currentRecommendationPackage.reduce((sum, rec) => sum + rec.improvement, 0);
-    
-    if (!confirm(`Are you sure you want to apply all ${substitutionCount} substitutions for a total improvement of +${totalImprovement.toFixed(1)} points?`)) {
-        return;
-    }
-    
-    console.log(`Applying complete package of ${substitutionCount} substitutions...`);
-    
-    // Show loading state
-    showStatusMessage('Applying substitution package...', 'info');
-    
-    // Apply all substitutions sequentially
-    applySubstitutionsSequentially(currentRecommendationPackage, 0);
-}
-
-function applySubstitutionsSequentially(substitutions, index) {
-    if (index >= substitutions.length) {
-        // All substitutions completed
-        showStatusMessage(`Successfully applied all ${substitutions.length} substitutions!`, 'success');
-        // Refresh the squad and recommendations
-        loadCurrentSquad();
-        setTimeout(() => {
-            loadSubstituteRecommendations();
-        }, 1500);
-        return;
-    }
-    
-    const substitution = substitutions[index];
-    const currentPlayerName = substitution.current_player.name;
-    const substitutePlayerName = substitution.substitute.name;
-    const position = substitution.position;
-    
-    console.log(`Applying substitution ${index + 1}/${substitutions.length}: ${currentPlayerName} → ${substitutePlayerName}`);
-    
-    // Remove current player
-    fetch('/api/remove-player/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
-        },
-        body: JSON.stringify({
-            position: position,
-            player_name: currentPlayerName
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success || !data.error) {
-            // Add substitute player
-            return fetch('/api/add-player/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken()
-                },
-                body: JSON.stringify({
-                    position: position,
-                    player_name: substitutePlayerName
-                })
+// Load current squad from database (loads into localTeam)
+function loadCurrentSquadFromDatabase() {
+    try {
+        window.localTeam = [];
+        const currentSquadData = window.currentSquadData || {};
+        window.currentSquad = currentSquadData;
+        console.log('📊 Loading current squad from database:', currentSquadData);
+        let playerData = window.serverPlayers;
+        if (!playerData) {
+            console.error('window.serverPlayers is not defined. Cannot match players.');
+            return;
+        }
+        const positionMapping = {
+            'goalkeepers': 'GKP',
+            'defenders': 'DEF',
+            'midfielders': 'MID',
+            'forwards': 'FWD'
+        };
+        Object.keys(positionMapping).forEach(dbPosition => {
+            const players = currentSquadData[dbPosition] || [];
+            players.forEach(playerEntry => {
+                let playerName = typeof playerEntry === 'string' ? playerEntry : playerEntry.name;
+                if (!playerName) return;
+                const playerMatch = playerData.find(p => p.name === playerName);
+                if (playerMatch) {
+                    const expectedPosition = positionMapping[dbPosition];
+                    if (playerMatch.position === expectedPosition) {
+                        window.localTeam.push(playerMatch);
+                    } else {
+                        const correctedPlayer = { ...playerMatch, position: expectedPosition };
+                        window.localTeam.push(correctedPlayer);
+                    }
+                    console.log(`✅ Added ${playerName} (${expectedPosition}) to local team`);
+                } else {
+                    console.warn(`⚠️ Player ${playerName} not found in available players data, skipping.`);
+                }
             });
-        } else {
-            throw new Error(data.error || 'Failed to remove player');
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success || !data.error) {
-            // Move to next substitution
-            setTimeout(() => {
-                applySubstitutionsSequentially(substitutions, index + 1);
-            }, 300); // Small delay between operations
-        } else {
-            throw new Error(data.error || 'Failed to add substitute player');
-        }
-    })
-    .catch(error => {
-        console.error(`Error in substitution ${index + 1}:`, error);
-        showStatusMessage(`Error in substitution ${index + 1}: ${error.message}`, 'error');
-    });
+        });
+        // Remove any undefined/null entries just in case
+        window.localTeam = window.localTeam.filter(Boolean);
+        console.log(`📊 Loaded ${window.localTeam.length} players from current squad`);
+        updateSquadBadges();
+        displayCurrentSquad();
+        console.log('✅ Current squad loaded and displayed.');
+    } catch (e) {
+        console.error('❌ Error loading current squad:', e);
+        window.localTeam = [];
+        updateSquadBadges();
+        displayCurrentSquad();
+    }
 }
 
-function makeSubstitution(currentPlayerName, substitutePlayerName, position) {
-    if (!confirm(`Are you sure you want to replace ${currentPlayerName} with ${substitutePlayerName}?`)) {
-        return;
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadCurrentSquadFromDatabase();
+    setTimeout(updateSquadDisplay, 0);
+});
+
+
+
+// Filter players based on search term
+function filterPlayers(searchTerm = '', positionFilter = 'all') {
+    if (dynamicAllPlayers.length === 0) return;
+
+    // Apply search filter
+    let filtered = dynamicAllPlayers;
+    
+    if (searchTerm) {
+        filtered = filtered.filter(player => 
+            (player.name && player.name.toLowerCase().includes(searchTerm)) || 
+            (player.team && player.team.toLowerCase().includes(searchTerm))
+        );
     }
     
-    console.log(`Making substitution: ${currentPlayerName} → ${substitutePlayerName} (${position})`);
+    // Apply position filter
+    if (positionFilter !== 'all') {
+        filtered = filtered.filter(player => {
+            const playerPos = player.position || '';
+            return playerPos === positionFilter;
+        });
+    }
     
-    // First remove the current player
-    fetch('/api/remove-player/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
-        },
-        body: JSON.stringify({
-            position: position,
-            player_name: currentPlayerName
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success || !data.error) {
-            // Then add the substitute
-            return fetch('/api/add-player/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken()
-                },
-                body: JSON.stringify({
-                    position: position,
-                    player_name: substitutePlayerName
-                })
-            });
-        } else {
-            throw new Error(data.error || 'Failed to remove player');
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success || !data.error) {
-            showStatusMessage(`Successfully replaced ${currentPlayerName} with ${substitutePlayerName}!`, 'success');
-            // Refresh the squad and recommendations
-            loadCurrentSquad();
-            setTimeout(() => {
-                loadSubstituteRecommendations();
-            }, 1000);
-        } else {
-            throw new Error(data.error || 'Failed to add substitute player');
-        }
-    })
-    .catch(error => {
-        console.error('Error making substitution:', error);
-        showStatusMessage(`Error making substitution: ${error.message}`, 'error');
+    dynamicFilteredPlayers = filtered;
+    renderPlayers();
+    updatePlayerCounter(searchTerm, positionFilter);
+}
+
+
+
+// Update player counter
+function updatePlayerCounter(searchTerm = '', positionFilter = 'all') {
+    const counter = document.getElementById('player-counter');
+    if (!counter) return;
+    
+    const totalPlayers = dynamicAllPlayers.length;
+    const visiblePlayers = dynamicFilteredPlayers.length;
+    
+    if (searchTerm && positionFilter !== 'all') {
+        counter.textContent = `${visiblePlayers} of ${totalPlayers} ${positionFilter} shown`;
+    } else if (searchTerm) {
+        counter.textContent = `${visiblePlayers} of ${totalPlayers} players shown`;
+    } else if (positionFilter !== 'all') {
+        counter.textContent = `${visiblePlayers} ${positionFilter} shown`;
+    } else {
+        counter.textContent = `${totalPlayers} players shown`;
+    }
+}
+
+// Filter by position (updated for dynamic data)
+function filterByPosition(position) {
+    console.log('🎯 Position filter:', position);
+    
+    const searchTerm = document.getElementById('player-search').value.toLowerCase().trim();
+    filterPlayers(searchTerm, position);
+}
+
+// Position filter functionality
+function setupPositionTabs() {
+    const tabs = document.querySelectorAll('.position-tab');
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            // Remove active from all tabs
+            tabs.forEach(t => t.classList.remove('active'));
+            // Add active to clicked tab
+            this.classList.add('active');
+            
+            const position = this.dataset.position;
+            console.log('🎯 Position filter:', position);
+            
+            filterByPosition(position);
+        });
     });
 }
 
-function showRecommendationsError(message) {
-    document.getElementById('recommendations-error').style.display = 'block';
-    document.getElementById('error-message').textContent = message;
+// Reset filters (updated for dynamic data)
+function resetFilters() {
+    console.log('🔄 Resetting filters...');
+    
+    // Clear search
+    document.getElementById('player-search').value = '';
+    
+    // Reset position tabs
+    document.querySelectorAll('.position-tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelector('.position-tab[data-position="all"]').classList.add('active');
+    
+    // Reset to all players
+    dynamicFilteredPlayers = [...dynamicAllPlayers];
+    renderPlayers();
+    updatePlayerCounter();
 }
 
-function toggleRecommendationsSection() {
-    const content = document.getElementById('recommendations-content');
-    const icon = document.getElementById('toggle-recommendations-icon');
-    
-    if (recommendationsVisible) {
-        content.style.display = 'none';
-        icon.className = 'fas fa-eye-slash';
-        recommendationsVisible = false;
-    } else {
-        content.style.display = 'block';
-        icon.className = 'fas fa-eye';
-        recommendationsVisible = true;
+
+
+
+// Filter and render function (corrected version)
+function filterAndRender() {
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    let visibleCount = 0;
+
+    playerCards.forEach(card => {
+        const name = card.dataset.name || '';
+        const team = card.dataset.team || '';
+        const playerPosition = card.getAttribute('data-position') || ''; // More direct attribute access
+
+        const matchesSearch = searchTerm === '' || name.includes(searchTerm) || team.includes(searchTerm);
+        const matchesPosition = currentPositionFilter === 'all' || playerPosition === currentPositionFilter;
+
+        if (matchesSearch && matchesPosition) {
+            card.style.display = 'flex';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+
+    playerCounter.textContent = `${visibleCount} of {{ total_players }} players shown`;
+}
+
+// Initialize with server data
+function initializeWithServerData() {
+    try {
+        console.log('📊 Initializing with server data...');
+        
+        if (typeof window.serverPlayers !== 'undefined' && Array.isArray(window.serverPlayers) && window.serverPlayers.length > 0) {
+            // Use all players instead of slicing to 5
+            dynamicAllPlayers = window.serverPlayers; 
+            dynamicFilteredPlayers = [...dynamicAllPlayers];
+            
+            // Also update the global reference
+            window.dynamicAllPlayers = dynamicAllPlayers;
+            
+            console.log(`✅ Success! Loaded ${dynamicAllPlayers.length} players.`);
+            
+            // Render players and update counter
+            renderPlayers();
+            updatePlayerCounter();
+            updateSquadBadges(); // Initialize squad badges
+
+            // Hide the loading indicator that shows "Preparing player data..."
+            const initialLoading = document.getElementById('initial-loading');
+            if (initialLoading) {
+                initialLoading.style.display = 'none';
+            }
+            
+        } else {
+            console.warn('⚠️ No player data found from server. `serverPlayers` is either undefined, not an array, or empty.');
+            throw new Error('No valid player data was provided by the server.');
+        }
+        
+    } catch (error) {
+        console.error('❌ Critical Error: Could not initialize player data.', error);
+        
+        const playersList = document.getElementById('players-list');
+        if (playersList) {
+            playersList.innerHTML = `
+                <div class="alert alert-danger m-3">
+                    <h6><i class="fas fa-exclamation-triangle"></i> Failed to Load Players</h6>
+                    <p class="mb-2">There was a JavaScript error while loading player data. Check the browser console for details.</p>
+                    <p><em>${error.message}</em></p>
+                    <button class="btn btn-sm btn-outline-danger" onclick="location.reload()">🔄 Reload Page</button>
+                </div>
+            `;
+        }
     }
 }
