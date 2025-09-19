@@ -12,5 +12,6 @@ urlpatterns = [
     path("player/<str:player_name>/", views.player_info, name="player_info"),
     # Squad Points API endpoints
     path('squad_points/', views.squad_points_page, name='squad_points'),
+    path('new_home/', views.new_home_page, name='new_home_page'),
     path('api/', include('MyApi.urls')),
 ]

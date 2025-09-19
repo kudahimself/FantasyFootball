@@ -186,14 +186,6 @@ def player_ratings(request):
     return render(request, 'player_ratings.html', context)
 
 
-
-
-
-
-
-
-
-
 def player_info(request, player_name):
     """
     Display detailed information for a specific player including match history and Elo chart.
@@ -341,3 +333,9 @@ def squad_points_page(request):
     Render the squad points page.
     """
     return render(request, 'squad_points.html')
+
+def new_home_page(request):
+    """
+    Render the new home page.
+    """
+    return render(request, 'new_home_page.html')

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Fantasy Football Home{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/new_home.css' %}">
+
+
+<div class="home-flex-container">
+    <div class="nav-card-list" id="squad-attributes-list">
+        <div class="nav-card"><i class="fas fa-bolt"></i><span>Projected Points: <span id="attr-projected-points">--</span></span></div>
+        <div class="nav-card"><i class="fas fa-coins"></i><span>Team Cost: <span id="attr-team-cost">--</span></span></div>
+        <div class="nav-card"><i class="fas fa-chart-line"></i><span>Average ELO: <span id="attr-avg-elo">--</span></span></div>
+        <div class="nav-card"><i class="fas fa-user-plus"></i><span>Substitutes Available: <span id="attr-subs">--</span></span></div>
+    </div>
+    <div class="squad-section">
+        <h2>My Current Squad</h2>
+        <div id="squad-list" class="squad-list">
+            <!-- Squad will be loaded here by JS -->
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'js/new_home.js' %}"></script>
+{% endblock %}
