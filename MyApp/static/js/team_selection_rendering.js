@@ -1,5 +1,5 @@
 // Update squad display function (uses localTeam)
-initializeWithServerData();
+
 function updateSquadDisplay() {
     const squadContent = document.getElementById('squad-content');
     if (!squadContent) return;
@@ -28,12 +28,12 @@ function updateSquadDisplay() {
                 squadHTML += `<div class="position-group mb-2">`;
                 squadHTML += `<div class="position-label mb-1">${pos}</div>`;
                 grouped[pos].forEach(player => {
-                    squadHTML += `<div class="selected-player-card">`;
+                    squadHTML += `<div class="player-card">`;
                     squadHTML += `<div class="player-info">`;
                     squadHTML += `<div class="player-name">${player.name} ${positionBadges[player.position] || ''}</div>`;
                     squadHTML += `<div class="player-team">📍 ${player.team}</div>`;
                     squadHTML += `</div>`;
-                    squadHTML += `<div class="player-stats">`;
+                    squadHTML += `<div class="player-stats-team-selection">`;
                     squadHTML += `<div class="player-price">£${player.cost}m</div>`;
                     squadHTML += `<div class="player-points">📊 ${player.elo_rating ? Math.round(player.elo_rating * 10) / 10 : 0}</div>`;
                     squadHTML += `<div class="player-projected">⭐ ${player.projected_points || 0}pts</div>`;
@@ -85,11 +85,11 @@ function renderPlayers() {
             <div class="player-card">
                 <div class="player-info">
                     <div class="player-name">${name} <span class="badge ${posMap.class} ms-2">${posMap.display}</span></div>
-                    <div class="player-team">📍 ${team}</div>
+                    <div class="player-team">${team}</div>
                 </div>
                 <div class="player-stats">
                     <div class="player-price">${cost}</div>
-                    <div class="player-points">📊 ${eloRating}</div>
+                    <div class="player-points"> 📊 ${eloRating}</div>
                     <div class="player-projected">⭐ ${projectedPoints}pts</div>
                 </div>
                 <button class="add-btn" onclick="addPlayer('${player.id || name}', '${name}')">+ Add</button>
@@ -173,14 +173,14 @@ function displayCurrentSquad() {
                 // .player-team
                 const teamDiv = document.createElement('div');
                 teamDiv.className = 'player-team';
-                teamDiv.textContent = '📍 ' + (player.team || '');
+                teamDiv.textContent = (player.team || '');
                 info.appendChild(teamDiv);
 
                 card.appendChild(info);
 
                 // .player-stats
                 const stats = document.createElement('div');
-                stats.className = 'player-stats';
+                stats.className = 'player-stats-team-selection';
 
                 // .player-price
                 const price = document.createElement('div');

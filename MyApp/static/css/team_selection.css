@@ -132,10 +132,11 @@
     color: #212529;
     margin: 0;
     line-height: 1.2;
+    font-size: 0.85em;
 }
 
 .player-team {
-    font-size: 0.8em;
+    font-size: 0.7em;
     color: #6c757d;
     margin: 0;
 }
@@ -147,10 +148,29 @@
     gap: 2px;
 }
 
+.player-stats-team-selection {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+.player-projected {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    font-size: 0.8em;
+}
+
 .player-price {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    font-size: 0.8em;
     font-weight: 600;
     color: #28a745;
-    font-size: 0.9em;
 }
 
 .player-points {
@@ -305,13 +325,13 @@ h1, h2 { margin-left: 10px; }
     align-items: center;
     gap: 8px;
 }
-.selected-player-card .player-stats {
+/* .selected-player-card .player-stats {
     display: flex;
     gap: 10px;
     margin-right: 10px;
     align-items: center;
     min-width: 120px;
-}
+} */
 
 .selected-player-card:last-child {
     margin-bottom: 0;
