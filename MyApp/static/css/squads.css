@@ -22,8 +22,8 @@
     display: flex;
     width: 100%;
     justify-content: center;
-    gap: min(60px, 4vw);
-    margin-bottom: 12px;
+    gap: min(140px, 8vw);
+    margin-bottom: 32px;
 }
 
 .player-svg-card {
@@ -70,8 +70,8 @@
     gap: 0;
 }
 .player-svg-container {
-    width: 90px;
-    height: 90px;
+    width: 54px;
+    height: 54px;
     margin-bottom: 6px;
     display: flex;
     align-items: center;
@@ -83,13 +83,7 @@
     transform: scaleX(1.1);
     display: block;
 }
-.squad-row {
-    display: flex;
-    width: 100%;
-    justify-content: center;
-    gap: min(140px, 8vw);
-    margin-bottom: 32px;
-}
+
 .player-svg-name {
     font-weight: 700;
     font-size: 1.01rem;
@@ -338,3 +332,4 @@ button:hover {
         max-width: 120px;
     }
 }
+

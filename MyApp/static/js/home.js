@@ -43,7 +43,6 @@ function renderSquad(squadData) {
             rowDiv.className = 'squad-row';
             players.forEach(playerObj => {
                 const card = document.createElement('div');
-                // Only show first name
                 // Only show last name
                 let lastName = '';
                 if (playerObj.name) {

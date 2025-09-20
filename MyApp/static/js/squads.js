@@ -171,7 +171,6 @@ function generateFormationGrid(positions, data, targetElement) {
             rowDiv.className = 'squad-row';
             players.forEach(playerObj => {
                 const card = document.createElement('div');
-                card.className = 'player-svg-card';
                 // Only show last name
                 let lastName = '';
                 if (playerObj.name) {
