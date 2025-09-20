@@ -1,3 +1,139 @@
+/* Home page squad rendering styles for squads page */
+.squad-list {
+    width: 100%;
+    min-width: 800px;
+    max-width: 900px;
+    min-height: 500px;
+    position: relative;
+    background: url('/static/img/football_pitch.png') center center/contain no-repeat;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(30,58,138,0.10);
+    overflow: hidden;
+    padding: 24px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    justify-content: center;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.squad-row {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    gap: min(60px, 4vw);
+    margin-bottom: 12px;
+}
+
+.player-svg-card {
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(30,58,138,0.10);
+    padding: 18px 14px 20px 14px;
+    min-width: 130px;
+    max-width: 150px;
+    width: 140px;
+    min-height: 170px;
+    max-height: 190px;
+    height: 180px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    position: relative;
+    margin-bottom: 0;
+    transition: transform 0.15s, box-shadow 0.15s;
+    background: none;
+}
+/* Match home page squad-section spacing and remove extra whitespace */
+.squad-section {
+    background: transparent;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(30,58,138,0.10);
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto 40px auto;
+    padding: 32px 24px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    align-self: flex-start;
+}
+.home-flex-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    gap: 0;
+}
+.player-svg-container {
+    width: 90px;
+    height: 90px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.player-svg-container img {
+    width: 90px;
+    height: 90px;
+    transform: scaleX(1.1);
+    display: block;
+}
+.squad-row {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    gap: min(140px, 8vw);
+    margin-bottom: 32px;
+}
+.player-svg-name {
+    font-weight: 700;
+    font-size: 1.01rem;
+    color: #1e3a8a;
+    font-weight: 500;
+    font-size: 0.78rem;
+    color: #111;
+    background: #fff;
+    border-radius: 6px;
+    padding: 2px 8px;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+}
+.player-svg-card:hover {
+    transform: translateY(-4px) scale(1.04);
+    box-shadow: 0 6px 18px rgba(30,58,138,0.16);
+}
+.player-svg-container {
+    width: 54px;
+    height: 54px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.player-svg-name {
+    font-weight: 700;
+    font-size: 1.01rem;
+    color: #1e3a8a;
+    font-weight: 500;
+    font-size: 0.78rem;
+    color: #111;
+    background: #fff;
+    border-radius: 6px;
+    padding: 2px 8px;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+}
 /* Formation styling for squads page */
 #formation {
     background: linear-gradient(to bottom, #2ecc71 0%, #27ae60 100%);

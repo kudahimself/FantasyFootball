@@ -75,11 +75,11 @@ function generateAndDisplaySquads() {
 }
 
 function showSquad(squad_number) {
-    const squadContent = document.getElementById("squad-content");
+    const squadList = document.getElementById("squad-list");
     const squadNumberElement = document.getElementById("current-squad-number");
-    
+
     const squad = fantasysquads.find(s => s.squad_number === parseInt(squad_number));
-    
+
     if (squad) {
         // Show the current squad number and the formation as returned by backend
         squadNumberElement.textContent = squad.squad_number;
@@ -124,7 +124,7 @@ function showSquad(squad_number) {
                 }
             }
         } catch {}
-        
+
         // Create player data object in the format generateFormationGrid expects
         const playerData = {
             goalkeepers: squad.goalkeepers || [],
@@ -132,9 +132,9 @@ function showSquad(squad_number) {
             midfielders: squad.midfielders || [],
             forwards: squad.forwards || []
         };
-        
-        generateFormationGrid(squad.positions, playerData, squadContent);
-        
+
+        generateFormationGrid(squad.positions, playerData, squadList);
+
         // Highlight active squad button if present
         for (let i = 1; i <= 4; i++) {
             const btn = document.getElementById(`btn-squad-${i}`);
@@ -144,67 +144,53 @@ function showSquad(squad_number) {
             }
         }
     } else {
-        squadContent.innerHTML = `<p>No squad found for number ${squad_number}.</p>`;
+        squadList.innerHTML = `<p>No squad found for number ${squad_number}.</p>`;
     }
 }
 
+
 function generateFormationGrid(positions, data, targetElement) {
     // Clear previous content
-    targetElement.innerHTML = ''; 
+    targetElement.innerHTML = '';
 
-    const goalkeepers = positions[0];
-    const defenders = positions[1];
-    const midfielders = positions[2];
-    const forwards = positions[3];
+    // Create the main squad-list div (with pitch background)
+    const squadList = document.createElement('div');
+    squadList.className = 'squad-list';
 
-    const rows = [
-        { label: 'GK', count: goalkeepers, players: data?.goalkeepers },
-        { label: 'DEF', count: defenders, players: data?.defenders },
-        { label: 'MID', count: midfielders, players: data?.midfielders },
-        { label: 'FWD', count: forwards, players: data?.forwards }
+    const positionOrder = [
+        { key: 'goalkeepers', label: 'GKP', count: positions[0] },
+        { key: 'defenders', label: 'DEF', count: positions[1] },
+        { key: 'midfielders', label: 'MID', count: positions[2] },
+        { key: 'forwards', label: 'FWD', count: positions[3] }
     ];
 
-    // Create the main formation div
-    const formation = document.createElement('div');
-    formation.id = 'formation';
-
-    for (let row of rows) {
-        if (row.count > 0) {
-            const rowContainer = document.createElement('div');
-            rowContainer.classList.add('formation-row');
-
-            for (let i = 0; i < row.count; i++) {
-                // Create player container
-                const playerContainer = document.createElement('div');
-                playerContainer.classList.add('player-container');
-                
-                // Create player circle
-                const playerCircle = document.createElement('div');
-                playerCircle.classList.add('player-circle');
-                playerCircle.textContent = row.label;
-                
-                // Create player name label
-                const playerName = document.createElement('div');
-                playerName.classList.add('player-name');
-                
-                if (row.players && row.players[i]) {
-                    playerName.textContent = row.players[i].name;
-                } else {
-                    playerName.textContent = row.label + ' ' + (i + 1);
+    positionOrder.forEach(pos => {
+        const players = data[pos.key] || [];
+        if (players.length > 0) {
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'squad-row';
+            players.forEach(playerObj => {
+                const card = document.createElement('div');
+                card.className = 'player-svg-card';
+                // Only show last name
+                let lastName = '';
+                if (playerObj.name) {
+                    const nameParts = playerObj.name.trim().split(' ');
+                    lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : nameParts[0];
                 }
-                
-                // Append circle and name to container
-                playerContainer.appendChild(playerCircle);
-                playerContainer.appendChild(playerName);
-                
-                // Append container to row
-                rowContainer.appendChild(playerContainer);
-            }
-            formation.appendChild(rowContainer);
+                card.innerHTML = `
+                    <div class="player-svg-container">
+                        <img src="/static/img/player.png" width="90" height="90" alt="Player Icon" />
+                    </div>
+                    <div class="player-svg-name">${lastName}</div>
+                `;
+                rowDiv.appendChild(card);
+            });
+            squadList.appendChild(rowDiv);
         }
-    }
-    // Append the whole formation to the target element
-    targetElement.appendChild(formation);
+    });
+
+    targetElement.appendChild(squadList);
 }
 
 
