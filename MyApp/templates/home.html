@@ -1,101 +1,29 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}My Fantasy Squad{% endblock %}
+{% block title %}Fantasy Football Home{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/squads.css' %}">
+<link rel="stylesheet" href="{% static 'css/home.css' %}">
 
-<style>
-    /* Home page: remove horizontal padding so formation spans full screen width */
-    .container-fluid { padding-left: 0 !important; padding-right: 0 !important; }
-    #current-squad-display { padding: 0 !important; margin: 0 !important; }
-    #formation {
-        padding: 0 !important;       /* remove inner padding so rows use full width */
-        margin: 0 auto 20px !important;
-        max-width: none !important;  /* drop 1400px cap for home page */
-        width: 100% !important;      /* occupy full available width */
-    }
-</style>
 
-<h1>My Current Squad</h1>
-
-<div id="current-squad-display">
-    {% if current_squad %}
-        <div id="formation">
-            <!-- Goalkeepers -->
-            {% if current_squad.goalkeepers %}
-                <div class="formation-row">
-                    {% for player in current_squad.goalkeepers %}
-                        <div class="player-container">
-                            <div class="player-circle">GK</div>
-                            <div class="player-name">{{ player.name }}</div>
-                        </div>
-                    {% endfor %}
+<div class="home-flex-container">
+    <div class="squad-section">
+        <div style="display: flex; flex-direction: row; align-items: flex-start; justify-content: center; width: 100%;">
+            <div class="squad-attributes-pane">
+                <div class="nav-card-list" id="squad-attributes-list">
+                    <div class="nav-card"><i class="fas fa-bolt"></i><span>Projected Points: <span id="attr-projected-points">--</span></span></div>
+                    <div class="nav-card"><i class="fas fa-coins"></i><span>Team Cost: <span id="attr-team-cost">--</span></span></div>
+                    <div class="nav-card"><i class="fas fa-chart-line"></i><span>Average ELO: <span id="attr-avg-elo">--</span></span></div>
+                    <div class="nav-card"><i class="fas fa-user-plus"></i><span>Substitutes Available: <span id="attr-subs">--</span></span></div>
                 </div>
-            {% endif %}
-
-            <!-- Defenders -->
-            {% if current_squad.defenders %}
-                <div class="formation-row">
-                    {% for player in current_squad.defenders %}
-                        <div class="player-container">
-                            <div class="player-circle">DEF</div>
-                            <div class="player-name">{{ player.name }}</div>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-
-            <!-- Midfielders -->
-            {% if current_squad.midfielders %}
-                <div class="formation-row">
-                    {% for player in current_squad.midfielders %}
-                        <div class="player-container">
-                            <div class="player-circle">MID</div>
-                            <div class="player-name">{{ player.name }}</div>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-
-            <!-- Forwards -->
-            {% if current_squad.forwards %}
-                <div class="formation-row">
-                    {% for player in current_squad.forwards %}
-                        <div class="player-container">
-                            <div class="player-circle">FWD</div>
-                            <div class="player-name">{{ player.name }}</div>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
+            </div>
+            <div id="squad-list" class="squad-list">
+                <!-- Squad will be loaded here by JS -->
+            </div>
         </div>
-
-        <!-- Squad Summary -->
-        <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px; text-align: center;">
-            <h3>Squad Summary</h3>
-            <p>
-                <strong>Goalkeepers:</strong> {{ current_squad.goalkeepers|length }} |
-                <strong>Defenders:</strong> {{ current_squad.defenders|length }} |
-                <strong>Midfielders:</strong> {{ current_squad.midfielders|length }} |
-                <strong>Forwards:</strong> {{ current_squad.forwards|length }}
-            </p>
-            <p><strong>Total Players:</strong> {{ current_squad.goalkeepers|length|add:current_squad.defenders|length|add:current_squad.midfielders|length|add:current_squad.forwards|length }}</p>
-        </div>
-
-        <!-- Navigation to Management -->
-        <div style="text-align: center; margin: 20px 0;">
-            <a href="{% url 'team_selection' %}" class="btn btn-primary" style="margin: 5px;">Manage Squad</a>
-            <a href="{% url 'squads' %}" class="btn btn-secondary" style="margin: 5px;">Generate New Squads</a>
-        </div>
-    {% else %}
-        <div style="text-align: center; padding: 40px;">
-            <h3>No Squad Available</h3>
-            <p>You haven't created a squad yet.</p>
-            <a href="{% url 'team_selection' %}" class="btn btn-primary">Create Your Squad</a>
-        </div>
-    {% endif %}
+    </div>
 </div>
 
+<script src="{% static 'js/home.js' %}"></script>
 {% endblock %}

@@ -6,24 +6,9 @@ import json
 
 def home(request):
     """
-    Home page displaying the current squad without any edit functionality.
+    Render the home page.
     """
-    try:
-        current_squad_instance = CurrentSquad.get_or_create_current_squad()
-        current_squad = current_squad_instance.squad
-    except:
-        # If there's an issue with the database, show empty squad
-        current_squad = {
-            "goalkeepers": [],
-            "defenders": [],
-            "midfielders": [],
-            "forwards": []
-        }
-    
-    context = {
-        'current_squad': current_squad
-    }
-    return render(request, 'home.html', context)
+    return render(request, 'home.html')
 
 def team_selection(request):
     """
@@ -334,8 +319,3 @@ def squad_points_page(request):
     """
     return render(request, 'squad_points.html')
 
-def new_home_page(request):
-    """
-    Render the new home page.
-    """
-    return render(request, 'new_home_page.html')
