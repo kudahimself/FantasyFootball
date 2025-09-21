@@ -1,3 +1,52 @@
+/* Dark theme and transparency for home page, matching squads and squad_points */
+body {
+    background: #0E223B;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: #fff;
+    margin: 0;
+    padding: 0;
+}
+.container-fluid {
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+#squad, #squad-content {
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+.squad-summary, .squad-summary .card, .squad-summary .card-body {
+    background: transparent !important;
+    background-color: transparent !important;
+    color: #fff !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+.squad-summary .card-title {
+    color: #fff !important;
+}
+#squad > h2, #squad h2, #squad-title, .squad-title {
+    color: #fff !important;
+}
+.navbar,
+.navbar-expand-lg,
+.navbar-light,
+.bg-light,
+.border-bottom,
+.mb-3,
+.squad-nav {
+    background: transparent !important;
+    background-color: transparent !important;
+    color: #fff !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+.navbar .nav-link, .navbar .navbar-brand, .navbar .navbar-toggler-icon, .navbar .navbar-nav .nav-item .nav-link {
+    color: #fff !important;
+}
 .squad-attributes-pane {
     display: flex;
     flex-direction: column;
