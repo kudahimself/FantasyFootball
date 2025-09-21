@@ -7,8 +7,8 @@
     max-width: 260px;
     width: 260px;
     background: rgba(255,255,255,0.92);
-    border-radius: 16px;
-    box-shadow: 0 4px 16px rgba(30,58,138,0.10);
+    border-radius: 0;
+    box-shadow: none;
     margin-right: 36px;
     padding: 24px 10px 24px 10px;
     height: fit-content;
@@ -35,6 +35,8 @@ body {
     min-height: 100vh;
     margin: 0;
     gap: 0;
+    box-shadow: none;
+    border-radius: 0;
 }
 
 .nav-card-list {
@@ -126,8 +128,8 @@ body {
 
 .squad-section {
     background: transparent;
-    border-radius: 16px;
-    box-shadow: 0 4px 16px rgba(30,58,138,0.10);
+    border-radius: 0;
+    box-shadow: none;
     width: 100%;
     max-width: 1200px;
     margin: 0 auto 40px auto;
@@ -160,7 +162,8 @@ body {
     min-height: 500px;
     position: relative;
     background: url('/static/img/football_pitch.png') center center/contain no-repeat;
-    border-radius: 16px;
+    border-radius: 0;
+    border: none;
     /* box-shadow: 0 4px 16px rgba(30,58,138,0.10); */
     overflow: hidden;
     padding: 24px 0;
@@ -178,6 +181,7 @@ body {
     justify-content: center;
     gap: min(140px, 8vw);
     margin-bottom: 32px;
+    border: none;
 }
 
 /* Player SVG Card Styles */

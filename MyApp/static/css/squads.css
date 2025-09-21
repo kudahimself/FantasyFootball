@@ -1,3 +1,52 @@
+.navbar,
+.navbar-expand-lg,
+.navbar-light,
+.bg-light,
+.border-bottom,
+.mb-3,
+.squad-nav {
+    background: transparent !important;
+    background-color: transparent !important;
+    color: #fff !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+.navbar .nav-link, .navbar .navbar-brand, .navbar .navbar-toggler-icon, .navbar .navbar-nav .nav-item .nav-link {
+    color: #fff !important;
+}
+.squad-summary, .squad-summary .card, .squad-summary .card-body {
+    background: transparent !important;
+    background-color: transparent !important;
+    color: #fff !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+.squad-summary .card-title {
+    color: #fff !important;
+}
+#squad > h2, #squad h2, #squad-title, .squad-title {
+    color: #fff !important;
+}
+#squad, #squad-content {
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+/* Ensure container-fluid is fully transparent so body background shows through */
+.container-fluid {
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+body {
+    background: #0E223B;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: #222;
+    margin: 0;
+    padding: 0;
+}
 /* Home page squad rendering styles for squads page */
 .squad-list {
     width: 100%;
@@ -5,9 +54,9 @@
     max-width: 900px;
     min-height: 500px;
     position: relative;
-    background: url('/static/img/football_pitch.png') center center/contain no-repeat;
-    border-radius: 16px;
-    box-shadow: 0 4px 16px rgba(30,58,138,0.10);
+    background: url('/static/img/football_pitch.png') center center/contain no-repeat, transparent;
+    border-radius: 0;
+    box-shadow: none;
     overflow: hidden;
     padding: 24px 0;
     display: flex;
@@ -27,8 +76,8 @@
 }
 
 .player-svg-card {
-    border-radius: 14px;
-    box-shadow: 0 2px 8px rgba(30,58,138,0.10);
+    border-radius: 0;
+    box-shadow: none;
     padding: 18px 14px 20px 14px;
     min-width: 130px;
     max-width: 150px;
