@@ -1,214 +1,234 @@
-// your_app/static/your_app/squads.js
+// squads.js - Squad builder focused on maximizing ELO (structure matches squad_points.js)
 
-let fantasysquads = [];
-let lastFormationInfo = null; // { formation: '3-4-3', counts: { keeper, defender, midfielder, attacker } }
+let currentSquadNumber = 1;
 
-// Add event listener for page-based navigation toggle
 document.addEventListener('DOMContentLoaded', function() {
-    // Toggle event listener - redirect to Projected Points page
     const toggle = document.getElementById('selection-mode-toggle');
     if (toggle) {
         toggle.addEventListener('change', function() {
             if (this.checked) {
-                // Redirect to projected points squads page
                 window.location.href = '/squad_points/';
             }
         });
     }
+
+    const generateBtn = document.getElementById('btn-generate-squads');
+    if (generateBtn) {
+        generateBtn.addEventListener('click', generateAndDisplaySquads);
+    }
+
+    const formationSelect = document.getElementById('formation-select');
+    if (formationSelect) {
+        formationSelect.addEventListener('change', () => {
+            generateAndDisplaySquads();
+        });
+    }
 });
 
-// This function now handles both fetching and displaying the initial squad.
-function generateAndDisplaySquads() {
-    // Read selected formation (fallback to 3-4-3 if not present)
-    const formationSelect = document.getElementById('formation-select');
-    console.log("[Squads] Formation select element:", formationSelect);
-    console.log("[Squads] Formation select value:", formationSelect ? formationSelect.value : 'null');
-    
-    const formation = formationSelect && formationSelect.value ? formationSelect.value : '3-4-3';
-    // cache-busting param to avoid any intermediate caching
-    const url = `/api/squads/?formation=${encodeURIComponent(formation)}&_ts=${Date.now()}`;
-    console.log("[Squads] Request →", { selectedFormation: formation, url });
+window.onload = function() {
+    generateAndDisplaySquads();
+};
 
-    // Disable button while loading
+function generateAndDisplaySquads() {
+    const formationSelect = document.getElementById('formation-select');
+    const formation = formationSelect && formationSelect.value ? formationSelect.value : '3-4-3';
     const btn = document.getElementById('btn-generate-squads');
     if (btn) {
         btn.disabled = true;
         btn.textContent = 'Generating...';
     }
-
-    fetch(url)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
+    fetch(`/api/squads/?formation=${encodeURIComponent(formation)}&_ts=${Date.now()}`)
+        .then(response => response.json())
         .then(data => {
-            fantasysquads = data.squads;
-            lastFormationInfo = { formation: data.formation, counts: data.counts };
-            console.log("[Squads] Response ←", { returnedFormation: data.formation, counts: data.counts, squads: fantasysquads });
-            
-            if (fantasysquads.length > 0) {
-                showSquad(fantasysquads[0].squad_number);
-            } else {
-                document.getElementById("squad-content").innerHTML = `<p>No squads were generated.</p>`;
-                // Reset squad button highlight if no squads
-                for (let i = 1; i <= 4; i++) {
-                    const btn = document.getElementById(`btn-squad-${i}`);
-                    if (btn) {
-                        btn.classList.remove('btn-success');
-                        btn.classList.add('btn-outline-success');
-                    }
-                }
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching squads:', error);
-            document.getElementById("squad-content").innerHTML = `<p>Error fetching squads. Please try again.</p>`;
-        })
-        .finally(() => {
             if (btn) {
                 btn.disabled = false;
                 btn.textContent = 'Generate Squads';
             }
+            if (data.squads && data.squads.length > 0) {
+                // Sort squads by total ELO descending
+                data.squads.sort((a, b) => {
+                    const eloA = getSquadTotalElo(a);
+                    const eloB = getSquadTotalElo(b);
+                    return eloB - eloA;
+                });
+                window.fantasysquads = data.squads;
+                showSquad(1);
+            } else {
+                const squadContent = document.getElementById('squad-content');
+                if (squadContent) {
+                    squadContent.innerHTML = `<div class="alert alert-warning">No squads generated. Try again.</div>`;
+                }
+            }
+        })
+        .catch(error => {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Generate Squads';
+            }
+            const squadContent = document.getElementById('squad-content');
+            if (squadContent) {
+                squadContent.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+            }
         });
 }
 
-function showSquad(squad_number) {
-    const squadList = document.getElementById("squad-list");
-    const squadNumberElement = document.getElementById("current-squad-number");
+function getSquadTotalElo(squad) {
+    const allPlayers = [
+        ...(squad.goalkeepers || []),
+        ...(squad.defenders || []),
+        ...(squad.midfielders || []),
+        ...(squad.forwards || [])
+    ];
+    return allPlayers.reduce((sum, player) => sum + (parseFloat(player.elo) || 0), 0);
+}
 
-    const squad = fantasysquads.find(s => s.squad_number === parseInt(squad_number));
-
+function showSquad(squadNumber) {
+    currentSquadNumber = squadNumber;
+    const squadNumberSpan = document.getElementById('current-squad-number');
+    if (squadNumberSpan) {
+        squadNumberSpan.textContent = squadNumber;
+    }
+    updateSquadButtonStates(squadNumber);
+    const squad = (window.fantasysquads || [])[squadNumber - 1];
+    const squadContent = document.getElementById('squad-content');
+    if (!squadContent) return;
     if (squad) {
-        // Show the current squad number and the formation as returned by backend
-        squadNumberElement.textContent = squad.squad_number;
-        try {
-            const header = squadNumberElement.parentElement; // <h2>Squad <span>1</span></h2>
-            const backendFormation = lastFormationInfo?.formation;
-            if (header && backendFormation) {
-                if (!document.getElementById('active-formation-label')) {
-                    const span = document.createElement('span');
-                    span.id = 'active-formation-label';
-                    span.style.marginLeft = '12px';
-                    span.style.fontSize = '0.9em';
-                    span.style.color = '#666';
-                    span.textContent = `(${backendFormation})`;
-                    header.appendChild(span);
-                } else {
-                    const span = document.getElementById('active-formation-label');
-                    if (span) span.textContent = `(${backendFormation})`;
-                }
-            }
-        } catch (e) {
-            console.debug('[Squads] Unable to set header formation label', e);
-        }
-
-        // Validate that positions match the backend counts (if provided)
-        try {
-            const positions = squad.positions;
-            if (lastFormationInfo?.counts && Array.isArray(positions) && positions.length === 4) {
-                const expected = [
-                    lastFormationInfo.counts.keeper,
-                    lastFormationInfo.counts.defender,
-                    lastFormationInfo.counts.midfielder,
-                    lastFormationInfo.counts.attacker,
-                ];
-                if (positions[0] !== expected[0] || positions[1] !== expected[1] ||
-                    positions[2] !== expected[2] || positions[3] !== expected[3]) {
-                    console.warn('[Squads] Mismatch: positions array vs backend counts', {
-                        positions,
-                        expectedCounts: expected,
-                        backend: lastFormationInfo
-                    });
-                }
-            }
-        } catch {}
-
-        // Create player data object in the format generateFormationGrid expects
-        const playerData = {
-            goalkeepers: squad.goalkeepers || [],
-            defenders: squad.defenders || [],
-            midfielders: squad.midfielders || [],
-            forwards: squad.forwards || []
-        };
-
-        generateFormationGrid(squad.positions, playerData, squadList);
-
-        // Highlight active squad button if present
-        for (let i = 1; i <= 4; i++) {
-            const btn = document.getElementById(`btn-squad-${i}`);
-            if (btn) {
-                btn.classList.toggle('btn-success', i === squad.squad_number);
-                btn.classList.toggle('btn-outline-success', i !== squad.squad_number);
-            }
-        }
+        displaySquadData(squad, squadNumber);
     } else {
-        squadList.innerHTML = `<p>No squad found for number ${squad_number}.</p>`;
+        squadContent.innerHTML = `<div class="alert alert-warning">No squad ${squadNumber} found. Generate squads first.</div>`;
     }
 }
 
+function updateSquadButtonStates(activeSquad) {
+    for (let i = 1; i <= 4; i++) {
+        const btn = document.getElementById(`btn-squad-${i}`);
+        if (btn) {
+            btn.classList.toggle('btn-success', i === activeSquad);
+            btn.classList.toggle('btn-outline-success', i !== activeSquad);
+        }
+    }
+}
+
+function displaySquadData(squad, squadNumber) {
+    const squadContent = document.getElementById('squad-content');
+    if (!squadContent) return;
+    const formation = document.getElementById('formation-select').value || '3-4-3';
+    const playerData = {
+        goalkeepers: squad.goalkeepers || [],
+        defenders: squad.defenders || [],
+        midfielders: squad.midfielders || [],
+        forwards: squad.forwards || []
+    };
+    const positions = getFormationPositions(formation);
+    const positionCounts = [
+        positions.find(p => p.key === 'goalkeepers')?.count || 1,
+        positions.find(p => p.key === 'defenders')?.count || 3,
+        positions.find(p => p.key === 'midfielders')?.count || 4,
+        positions.find(p => p.key === 'forwards')?.count || 3
+    ];
+    generateFormationGrid(positionCounts, playerData, squadContent);
+    addSquadSummary(squad, squadNumber, squadContent);
+}
 
 function generateFormationGrid(positions, data, targetElement) {
-    // Clear previous content
     targetElement.innerHTML = '';
-
-    // Create the main squad-list div (with pitch background)
     const squadList = document.createElement('div');
     squadList.className = 'squad-list';
-
     const positionOrder = [
         { key: 'goalkeepers', label: 'GKP', count: positions[0] },
         { key: 'defenders', label: 'DEF', count: positions[1] },
         { key: 'midfielders', label: 'MID', count: positions[2] },
         { key: 'forwards', label: 'FWD', count: positions[3] }
     ];
-
     positionOrder.forEach(pos => {
         const players = data[pos.key] || [];
         if (players.length > 0) {
             const rowDiv = document.createElement('div');
             rowDiv.className = 'squad-row';
             players.forEach(playerObj => {
-                const card = document.createElement('div');
-                // Only show last name
-                let lastName = '';
+                // Show second name if available, otherwise first
+                let displayName = '';
                 if (playerObj.name) {
                     const nameParts = playerObj.name.trim().split(' ');
-                    lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : nameParts[0];
+                    displayName = nameParts.length > 1 ? nameParts[1] : nameParts[0];
                 }
-                card.innerHTML = `
+                const playerDiv = document.createElement('div');
+                playerDiv.innerHTML = `
                     <div class="player-svg-container">
                         <img src="/static/img/player.png" width="90" height="90" alt="Player Icon" />
                     </div>
-                    <div class="player-svg-name">${lastName}</div>
+                    <div class="player-svg-name">${displayName}</div>
                 `;
-                rowDiv.appendChild(card);
+                rowDiv.appendChild(playerDiv);
             });
             squadList.appendChild(rowDiv);
         }
     });
-
     targetElement.appendChild(squadList);
 }
 
+function addSquadSummary(squad, squadNumber, targetElement) {
+    const allPlayers = [
+        ...(squad.goalkeepers || []),
+        ...(squad.defenders || []),
+        ...(squad.midfielders || []),
+        ...(squad.forwards || [])
+    ];
+    const totalCost = allPlayers.reduce((sum, player) => sum + parseFloat(player.cost || 0), 0);
+    const totalElo = allPlayers.reduce((sum, player) => sum + (parseFloat(player.elo) || 0), 0);
+    const avgElo = allPlayers.length > 0 ? (totalElo / allPlayers.length) : 0;
+    const summaryDiv = document.createElement('div');
+    summaryDiv.className = 'squad-summary mt-4';
+    summaryDiv.innerHTML = `
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Squad ${squadNumber} Summary (ELO)</h5>
+                <div class="row">
+                    <div class="col-md-4">
+                        <p><strong>Total Cost:</strong> £${totalCost.toFixed(1)}m / £100.0m</p>
+                        <p><strong>Remaining:</strong> £${(100 - totalCost).toFixed(1)}m</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p><strong>Total ELO:</strong> ${totalElo.toFixed(0)}</p>
+                        <p><strong>Avg ELO:</strong> ${avgElo.toFixed(0)}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p><strong>Players:</strong> ${allPlayers.length}/11</p>
+                        <p><strong>Strategy:</strong> ELO-optimized</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    targetElement.appendChild(summaryDiv);
+}
 
-window.onload = function() {
-    // Initial load
-    generateAndDisplaySquads();
-    
-    // Add event listener for the generate button
-    const generateBtn = document.getElementById('btn-generate-squads');
-    if (generateBtn) {
-        generateBtn.addEventListener('click', generateAndDisplaySquads);
-    }
-    
-    // Re-generate whenever the formation changes
-    const formationSelect = document.getElementById('formation-select');
-    if (formationSelect) {
-        formationSelect.addEventListener('change', () => {
-            console.log('[Squads] Formation changed →', formationSelect.value);
-            generateAndDisplaySquads();
-        });
-    }
-};
+function getFormationPositions(formation) {
+    const formations = {
+        '3-4-3': [
+            { key: 'goalkeepers', title: 'Goalkeepers', class: 'goalkeepers', count: 1 },
+            { key: 'defenders', title: 'Defenders', class: 'defenders', count: 3 },
+            { key: 'midfielders', title: 'Midfielders', class: 'midfielders', count: 4 },
+            { key: 'forwards', title: 'Forwards', class: 'forwards', count: 3 }
+        ],
+        '3-5-2': [
+            { key: 'goalkeepers', title: 'Goalkeepers', class: 'goalkeepers', count: 1 },
+            { key: 'defenders', title: 'Defenders', class: 'defenders', count: 3 },
+            { key: 'midfielders', title: 'Midfielders', class: 'midfielders', count: 5 },
+            { key: 'forwards', title: 'Forwards', class: 'forwards', count: 2 }
+        ],
+        '4-4-2': [
+            { key: 'goalkeepers', title: 'Goalkeepers', class: 'goalkeepers', count: 1 },
+            { key: 'defenders', title: 'Defenders', class: 'defenders', count: 4 },
+            { key: 'midfielders', title: 'Midfielders', class: 'midfielders', count: 4 },
+            { key: 'forwards', title: 'Forwards', class: 'forwards', count: 2 }
+        ],
+        '4-3-3': [
+            { key: 'goalkeepers', title: 'Goalkeepers', class: 'goalkeepers', count: 1 },
+            { key: 'defenders', title: 'Defenders', class: 'defenders', count: 4 },
+            { key: 'midfielders', title: 'Midfielders', class: 'midfielders', count: 3 },
+            { key: 'forwards', title: 'Forwards', class: 'forwards', count: 3 }
+        ]
+    };
+    return formations[formation] || formations['3-4-3'];
+}

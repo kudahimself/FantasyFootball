@@ -19,7 +19,7 @@
 }
 /* Fantasy Football Home Page Styles */
 body {
-    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+    background: #0E223B;
     font-family: 'Segoe UI', Arial, sans-serif;
     color: #222;
     margin: 0;
@@ -161,7 +161,7 @@ body {
     position: relative;
     background: url('/static/img/football_pitch.png') center center/contain no-repeat;
     border-radius: 16px;
-    box-shadow: 0 4px 16px rgba(30,58,138,0.10);
+    /* box-shadow: 0 4px 16px rgba(30,58,138,0.10); */
     overflow: hidden;
     padding: 24px 0;
     display: flex;

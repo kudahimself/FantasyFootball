@@ -4,6 +4,7 @@ from . import views
 
 urlpatterns = [
     path('squads/', views.get_squads, name='get_squads'),
+    path('squads/', views.generate_squads_points, name='generate_squads_points'),
     path('current_squad/', views.get_current_squad, name='get_current_squad'),
     path('all-players/', views.get_all_players, name='get_all_players'),
     path('add-player/', views.add_player_to_squad, name='add_player_to_squad'),

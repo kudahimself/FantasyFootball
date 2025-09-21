@@ -43,17 +43,17 @@ function renderSquad(squadData) {
             rowDiv.className = 'squad-row';
             players.forEach(playerObj => {
                 const card = document.createElement('div');
-                // Only show last name
-                let lastName = '';
+                // Show second name if available, otherwise first
+                let displayName = '';
                 if (playerObj.name) {
                     const nameParts = playerObj.name.trim().split(' ');
-                    lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : nameParts[0];
+                    displayName = nameParts.length > 1 ? nameParts[1] : nameParts[0];
                 }
                 card.innerHTML = `
                     <div class="player-svg-container">
                         <img src="/static/img/player.png" width="90" height="90" alt="Player Icon" />
                     </div>
-                    <div class="player-svg-name">${lastName}</div>
+                    <div class="player-svg-name">${displayName}</div>
                 `;
                 rowDiv.appendChild(card);
             });

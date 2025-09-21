@@ -2,6 +2,7 @@ from django.shortcuts import render, HttpResponse
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from MyApi.models import CurrentSquad, Player
+from MyApi.utils.generate_squads import SquadSelector
 import json
 
 # Create your views here.
@@ -9,132 +10,71 @@ import json
 def get_squads(request):
     """
     Generate squads from database and return them as JSON, honoring an optional 'formation' query param.
-    Allowed formations: '3-4-3', '3-5-2', '4-4-2', '4-3-3'.
-    Maps to counts: keeper=1, defender=X, midfielder=Y, attacker=Z.
+    Uses SquadSelector for ELO-based optimization.
     """
-    from MyApi.models import Player, SystemSettings
-    import random
-    
     formation_str = request.GET.get('formation', '3-4-3')
-    allowed = {
-        '3-4-3': (1, 3, 4, 3),
-        '3-5-2': (1, 3, 5, 2),
-        '4-4-2': (1, 4, 4, 2),
-        '4-3-3': (1, 4, 3, 3),
-    }
-    if formation_str not in allowed:
-        # Fallback to default if an unsupported formation is passed
-        formation_str = '3-4-3'
-    keeper_count, defender_count, midfielder_count, attacker_count = allowed[formation_str]
-
     try:
-        # Get current week from system settings
-        settings = SystemSettings.get_settings()
-        current_week = settings.current_gameweek
-        
-        # Get top players by position from database
-        keepers = list(Player.objects.filter(
-            position='Keeper', 
-            week=current_week
-        ).order_by('-elo')[:10])
-        
-        defenders = list(Player.objects.filter(
-            position='Defender', 
-            week=current_week
-        ).order_by('-elo')[:20])
-        
-        midfielders = list(Player.objects.filter(
-            position='Midfielder', 
-            week=current_week
-        ).order_by('-elo')[:20])
-        
-        attackers = list(Player.objects.filter(
-            position='Attacker', 
-            week=current_week
-        ).order_by('-elo')[:15])
-        
-        # Generate 4 different squads
+        selector = SquadSelector(formation=formation_str)
+        squads_pd = selector.select_top_n_squads(budget=82.5, top_n=4)
         squads = []
-        for i in range(4):
-            # Shuffle to get different combinations
-            random.shuffle(keepers)
-            random.shuffle(defenders)
-            random.shuffle(midfielders)
-            random.shuffle(attackers)
-            
+        for idx, squad_df in enumerate(squads_pd, 1):
+            # Convert DataFrame to squad dict for frontend
             squad = {
-                'squad_number': i + 1,  # Squad numbers 1-4
-                'positions': [keeper_count, defender_count, midfielder_count, attacker_count],  # Expected by frontend
+                'squad_number': idx,
+                'positions': [selector.position_counts['keeper'], selector.position_counts['defender'], selector.position_counts['midfielder'], selector.position_counts['attacker']],
                 'goalkeepers': [
                     {
-                        'name': player.name,
-                        'elo': round(float(player.elo), 1),
-                        'cost': float(player.cost),
-                        'team': player.team or 'Unknown'
+                        'name': row['Player'],
+                        'elo': round(float(row['Elo']), 1),
+                        'cost': float(row['Cost']),
+                        'team': 'Unknown'  # Add team if available in model/df
                     }
-                    for player in keepers[:keeper_count]
+                    for _, row in squad_df.iterrows() if row['Position'] == 'Keeper'
                 ],
                 'defenders': [
                     {
-                        'name': player.name,
-                        'elo': round(float(player.elo), 1),
-                        'cost': float(player.cost),
-                        'team': player.team or 'Unknown'
+                        'name': row['Player'],
+                        'elo': round(float(row['Elo']), 1),
+                        'cost': float(row['Cost']),
+                        'team': 'Unknown'
                     }
-                    for player in defenders[:defender_count]
+                    for _, row in squad_df.iterrows() if row['Position'] == 'Defender'
                 ],
                 'midfielders': [
                     {
-                        'name': player.name,
-                        'elo': round(float(player.elo), 1),
-                        'cost': float(player.cost),
-                        'team': player.team or 'Unknown'
+                        'name': row['Player'],
+                        'elo': round(float(row['Elo']), 1),
+                        'cost': float(row['Cost']),
+                        'team': 'Unknown'
                     }
-                    for player in midfielders[:midfielder_count]
+                    for _, row in squad_df.iterrows() if row['Position'] == 'Midfielder'
                 ],
                 'forwards': [
                     {
-                        'name': player.name,
-                        'elo': round(float(player.elo), 1),
-                        'cost': float(player.cost),
-                        'team': player.team or 'Unknown'
+                        'name': row['Player'],
+                        'elo': round(float(row['Elo']), 1),
+                        'cost': float(row['Cost']),
+                        'team': 'Unknown'
                     }
-                    for player in attackers[:attacker_count]
+                    for _, row in squad_df.iterrows() if row['Position'] == 'Attacker'
                 ]
             }
-            
-            # Calculate total cost and average Elo
-            all_players = []
-            all_players.extend(squad['goalkeepers'])
-            all_players.extend(squad['defenders'])
-            all_players.extend(squad['midfielders'])
-            all_players.extend(squad['forwards'])
-            
+            all_players = squad['goalkeepers'] + squad['defenders'] + squad['midfielders'] + squad['forwards']
             total_cost = sum(p['cost'] for p in all_players)
             total_elo = sum(p['elo'] for p in all_players)
             player_count = len(all_players)
-            
             squad['total_cost'] = round(total_cost, 1)
             squad['avg_elo'] = round(total_elo / player_count, 1) if player_count > 0 else 0
-            
-            squad['total_cost'] = round(total_cost, 1)
-            squad['avg_elo'] = round(total_elo / player_count, 1) if player_count > 0 else 0
-            
             squads.append(squad)
-        
         return JsonResponse({
             'squads': squads,
             'formation': formation_str,
-            'counts': {
-                'keeper': keeper_count,
-                'defender': defender_count,
-                'midfielder': midfielder_count,
-                'attacker': attacker_count,
-            }
+            'counts': selector.position_counts
         })
     except Exception as e:
-        # Surface a useful error to the client
         return JsonResponse({'error': f'Failed to generate squads: {str(e)}'}, status=500)
+
+
 
 def get_current_squad(request):
     """
@@ -985,65 +925,87 @@ def get_all_projected_points(request):
 def generate_squads_points(request):
     """
     Generate squads using projected points instead of ELO ratings.
+    Uses SquadSelectorPoints for projected points optimization.
     """
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Only POST method allowed'})
-    
     try:
+        from MyApi.utils.generate_squads_points import SquadSelectorPoints
         import json
-        from MyApi.models import Player, ProjectedPoints, SystemSettings
-        from django.db.models import Sum
-        
+
         data = json.loads(request.body) if request.body else {}
-        formation = data.get('formation', '3-4-3')
-        
-        current_week = SystemSettings.get_current_gameweek()
-        
-        # Get all players with their projected points
-        players_with_projections = []
-        players = Player.objects.filter(week=current_week)
-        
-        for player in players:
-            # Get total projected points for this player
-            total_projected = ProjectedPoints.objects.filter(
-                player_name=player.name
-            ).aggregate(
-                total=Sum('adjusted_expected_points')
-            )['total'] or 0
-            
-            players_with_projections.append({
-                'name': player.name,
-                'position': player.position,
-                'team': player.team,
-                'cost': player.cost,
-                'elo': player.elo,
-                'projected_points': round(total_projected, 1)
-            })
-        
-        # Sort by projected points (descending)
-        players_with_projections.sort(key=lambda x: x['projected_points'], reverse=True)
-        
-        # Generate 4 squads using projected points selection
-        squads_generated = 0
-        for squad_num in range(1, 5):
-            try:
-                squad = generate_single_squad_points(players_with_projections, formation, squad_num)
-                if squad:
-                    # Save squad (you might want to save to database)
-                    squads_generated += 1
-            except Exception as e:
-                print(f"Error generating squad {squad_num}: {e}")
-        
+        formation_str = data.get('formation', '3-4-3')
+
+        selector = SquadSelectorPoints(formation=formation_str)
+        squads_pd = selector.select_top_n_squads(budget=82.5, top_n=4)
+        squads = []
+        for idx, squad_df in enumerate(squads_pd, 1):
+            squad = {
+                'squad_number': idx,
+                'positions': [
+                    selector.position_counts['keeper'],
+                    selector.position_counts['defender'],
+                    selector.position_counts['midfielder'],
+                    selector.position_counts['attacker']
+                ],
+                'goalkeepers': [
+                    {
+                        'name': row['Player'],
+                        'projected_points': round(float(row['ProjectedPoints']), 1),
+                        'cost': float(row['Cost']),
+                        'team': row.get('Team', 'Unknown')
+                    }
+                    for _, row in squad_df.iterrows() if row['Position'] == 'Keeper'
+                ],
+                'defenders': [
+                    {
+                        'name': row['Player'],
+                        'projected_points': round(float(row['ProjectedPoints']), 1),
+                        'cost': float(row['Cost']),
+                        'team': row.get('Team', 'Unknown')
+                    }
+                    for _, row in squad_df.iterrows() if row['Position'] == 'Defender'
+                ],
+                'midfielders': [
+                    {
+                        'name': row['Player'],
+                        'projected_points': round(float(row['ProjectedPoints']), 1),
+                        'cost': float(row['Cost']),
+                        'team': row.get('Team', 'Unknown')
+                    }
+                    for _, row in squad_df.iterrows() if row['Position'] == 'Midfielder'
+                ],
+                'forwards': [
+                    {
+                        'name': row['Player'],
+                        'projected_points': round(float(row['ProjectedPoints']), 1),
+                        'cost': float(row['Cost']),
+                        'team': row.get('Team', 'Unknown')
+                    }
+                    for _, row in squad_df.iterrows() if row['Position'] == 'Attacker'
+                ]
+            }
+            all_players = (
+                squad['goalkeepers'] +
+                squad['defenders'] +
+                squad['midfielders'] +
+                squad['forwards']
+            )
+            total_cost = sum(p['cost'] for p in all_players)
+            total_points = sum(p['projected_points'] for p in all_players)
+            player_count = len(all_players)
+            squad['total_cost'] = round(total_cost, 1)
+            squad['avg_projected_points'] = round(total_points / player_count, 1) if player_count > 0 else 0
+            squads.append(squad)
         return JsonResponse({
             'success': True,
-            'message': f'Generated {squads_generated} squads using projected points',
-            'squads_created': squads_generated,
-            'formation': formation,
+            'squads': squads,
+            'formation': formation_str,
+            'counts': selector.position_counts,
             'selection_mode': 'projected_points'
         })
-        
     except Exception as e:
-        return JsonResponse({'success': False, 'error': f'Squad generation failed: {str(e)}'})
+        return JsonResponse({'success': False, 'error': f'Failed to generate squads: {str(e)}'})
 
 
 @csrf_exempt

@@ -69,16 +69,14 @@ function generateAndDisplaySquads() {
             btn.disabled = false;
             btn.textContent = 'Generate Squads';
         }
-        
-        if (data.success) {
-            console.log(`Generated ${data.squads_created || 4} squads using projected points`);
-            // Automatically show first squad
+        if (data.success && data.squads && data.squads.length > 0) {
+            window.fantasysquads = data.squads;
             showSquad(1);
         } else {
             console.error(`Error generating squads: ${data.error}`);
             const squadContent = document.getElementById('squad-content');
             if (squadContent) {
-                squadContent.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
+                squadContent.innerHTML = `<div class="alert alert-danger">Error: ${data.error || 'No squads generated.'}</div>`;
             }
         }
     })
@@ -97,44 +95,20 @@ function generateAndDisplaySquads() {
 
 function showSquad(squadNumber) {
     currentSquadNumber = squadNumber;
-    
     console.log(`[Squad Points] Showing squad ${squadNumber}`);
-    
-    // Update squad number display
     const squadNumberSpan = document.getElementById('current-squad-number');
     if (squadNumberSpan) {
         squadNumberSpan.textContent = squadNumber;
     }
-    
-    // Update button states
     updateSquadButtonStates(squadNumber);
-    
-    // Fetch squad from projected points API
-    fetch(`/api/squad_points/${squadNumber}/`)
-        .then(response => {
-            console.log(`[Squad Points] Squad response status: ${response.status}`);
-            return response.json();
-        })
-        .then(data => {
-            console.log(`[Squad Points] Squad data:`, data);
-            const squadContent = document.getElementById('squad-content');
-            if (!squadContent) return;
-            
-            if (data.success && data.squad) {
-                displaySquadData(data.squad, squadNumber);
-            } else {
-                squadContent.innerHTML = 
-                    `<div class="alert alert-warning">No squad ${squadNumber} found. Generate squads first.</div>`;
-            }
-        })
-        .catch(error => {
-            console.error(`[Squad Points] Squad fetch error:`, error);
-            const squadContent = document.getElementById('squad-content');
-            if (squadContent) {
-                squadContent.innerHTML = 
-                    `<div class="alert alert-danger">Error loading squad: ${error.message}</div>`;
-            }
-        });
+    const squad = (window.fantasysquads || [])[squadNumber - 1];
+    const squadContent = document.getElementById('squad-content');
+    if (!squadContent) return;
+    if (squad) {
+        displaySquadData(squad, squadNumber);
+    } else {
+        squadContent.innerHTML = `<div class="alert alert-warning">No squad ${squadNumber} found. Generate squads first.</div>`;
+    }
 }
 
 function updateSquadButtonStates(activeSquad) {
@@ -176,74 +150,58 @@ function displaySquadData(squad, squadNumber) {
     addSquadSummary(squad, squadNumber, squadContent);
 }
 
+
 function generateFormationGrid(positions, data, targetElement) {
     // Clear previous content
-    targetElement.innerHTML = ''; 
+    targetElement.innerHTML = '';
 
-    const goalkeepers = positions[0];
-    const defenders = positions[1];
-    const midfielders = positions[2];
-    const forwards = positions[3];
+    // Create the main squad-list div (with pitch background)
+    const squadList = document.createElement('div');
+    squadList.className = 'squad-list';
 
-    const rows = [
-        { label: 'GK', count: goalkeepers, players: data?.goalkeepers },
-        { label: 'DEF', count: defenders, players: data?.defenders },
-        { label: 'MID', count: midfielders, players: data?.midfielders },
-        { label: 'FWD', count: forwards, players: data?.forwards }
+    const positionOrder = [
+        { key: 'goalkeepers', label: 'GKP', count: positions[0] },
+        { key: 'defenders', label: 'DEF', count: positions[1] },
+        { key: 'midfielders', label: 'MID', count: positions[2] },
+        { key: 'forwards', label: 'FWD', count: positions[3] }
     ];
 
-    // Create the main formation div
-    const formation = document.createElement('div');
-    formation.id = 'formation';
-
-    for (let row of rows) {
-        if (row.count > 0) {
-            const rowContainer = document.createElement('div');
-            rowContainer.classList.add('formation-row');
-
-            for (let i = 0; i < row.count; i++) {
-                // Create player container
-                const playerContainer = document.createElement('div');
-                playerContainer.classList.add('player-container');
-                
-                // Create player circle
-                const playerCircle = document.createElement('div');
-                playerCircle.classList.add('player-circle');
-                playerCircle.textContent = row.label;
-                
-                // Create player name label
-                const playerName = document.createElement('div');
-                playerName.classList.add('player-name');
-                
-                if (row.players && row.players[i]) {
-                    playerName.textContent = row.players[i].name;
-                    
-                    // Add click handler for player info (same as original)
-                    playerContainer.addEventListener('click', () => {
-                        window.location.href = `/player/${encodeURIComponent(row.players[i].name)}/`;
-                    });
-                    playerContainer.style.cursor = 'pointer';
-                } else {
-                    playerName.textContent = row.label + ' ' + (i + 1);
+    positionOrder.forEach(pos => {
+        const players = data[pos.key] || [];
+        if (players.length > 0) {
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'squad-row';
+            players.forEach(playerObj => {
+                // Show second name if available, otherwise first
+                let displayName = '';
+                if (playerObj.name) {
+                    const nameParts = playerObj.name.trim().split(' ');
+                    displayName = nameParts.length > 1 ? nameParts[1] : nameParts[0];
                 }
-                
-                // Append circle and name to container
-                playerContainer.appendChild(playerCircle);
-                playerContainer.appendChild(playerName);
-                
-                // Append container to row
-                rowContainer.appendChild(playerContainer);
-            }
-            formation.appendChild(rowContainer);
+                const playerDiv = document.createElement('div');
+                playerDiv.innerHTML = `
+                    <div class="player-svg-container">
+                        <img src="/static/img/player.png" width="90" height="90" alt="Player Icon" />
+                    </div>
+                    <div class="player-svg-name">${displayName}</div>
+                `;
+                rowDiv.appendChild(playerDiv);
+            });
+            squadList.appendChild(rowDiv);
         }
-    }
-    // Append the whole formation to the target element
-    targetElement.appendChild(formation);
+    });
+
+    targetElement.appendChild(squadList);
 }
 
 function addSquadSummary(squad, squadNumber, targetElement) {
-    // Calculate squad totals
-    const allPlayers = Object.values(squad).flat();
+    // Calculate squad totals (only actual players)
+    const allPlayers = [
+        ...(squad.goalkeepers || []),
+        ...(squad.defenders || []),
+        ...(squad.midfielders || []),
+        ...(squad.forwards || [])
+    ];
     const totalCost = allPlayers.reduce((sum, player) => sum + parseFloat(player.cost || 0), 0);
     const totalProjectedPoints = allPlayers.reduce((sum, player) => sum + (parseFloat(player.projected_points) || 0), 0);
     
