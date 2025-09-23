@@ -61,7 +61,7 @@ def get_opponent_difficulty_mapping() -> Dict[str, int]:
     return final_mapping
 
 
-def calculate_expected_points(elo_rating: float, opponent_difficulty: int, competition: str = 'Premier League') -> float:
+def calculate_expected_points(elo: float, opponent_difficulty: int, competition: str = 'Premier League') -> float:
     """
     Calculate expected points using the Elo calculator formula.
     
@@ -69,7 +69,7 @@ def calculate_expected_points(elo_rating: float, opponent_difficulty: int, compe
     E_a = k/(1 + 10**(League_Rating/Ra))
     
     Args:
-        elo_rating: Player's Elo rating before the match
+        elo: Player's Elo rating before the match
         opponent_difficulty: FPL difficulty level (1-5)
         competition: Competition name (default: Premier League)
     
@@ -94,7 +94,7 @@ def calculate_expected_points(elo_rating: float, opponent_difficulty: int, compe
     k = 20
     
     # Expected score formula from elo_calculator.py (no adjustment needed here)
-    E_a = round(k / (1 + 10**(League_Rating / elo_rating)), 2)
+    E_a = round(k / (1 + 10**(League_Rating / elo)), 2)
     
     return E_a
 
@@ -317,7 +317,7 @@ def categorize_fixtures_by_difficulty(team_strengths: Dict[str, float]) -> Dict[
     return team_difficulties
 
 
-def calculate_expected_points(elo_rating: float, opponent_difficulty: int, competition: str = 'Premier League') -> float:
+def calculate_expected_points(elo: float, opponent_difficulty: int, competition: str = 'Premier League') -> float:
     """
     Calculate expected points using the Elo calculator formula.
     
@@ -325,7 +325,7 @@ def calculate_expected_points(elo_rating: float, opponent_difficulty: int, compe
     E_a = k/(1 + 10**(League_Rating/Ra))
     
     Args:
-        elo_rating: Player's Elo rating before the match
+        elo: Player's Elo rating before the match
         opponent_difficulty: Difficulty level (1-5)
         competition: Competition name (default: Premier League)
     
@@ -362,7 +362,7 @@ def calculate_expected_points(elo_rating: float, opponent_difficulty: int, compe
     k = 20
     
     # Expected score formula from elo_calculator.py
-    E_a = round(k / (1 + 10**(adjusted_league_rating / elo_rating)), 2)
+    E_a = round(k / (1 + 10**(adjusted_league_rating / elo)), 2)
     
     return E_a
 

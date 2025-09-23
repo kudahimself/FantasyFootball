@@ -97,7 +97,7 @@ async def optimized_recalculate_elos(max_players: int = None, batch_size: int = 
                     
                     if existing_player:
                         existing_player.elo = final_elo
-                        existing_player.elo_rating = final_elo
+                        existing_player.elo = final_elo
                         existing_player.cost = max(4.0, min(15.0, 4.0 + (final_elo - 1200) / 100))
                         await sync_to_async(existing_player.save)()
                     else:
@@ -111,7 +111,7 @@ async def optimized_recalculate_elos(max_players: int = None, batch_size: int = 
                         week=current_week,
                         season="2024-2025",
                         defaults={
-                            'elo_rating': final_elo,
+                            'elo': final_elo,
                             'previous_elo': elo_after[0] if len(elo_after) > 1 else 1200.0,
                             'elo_change': final_elo - (elo_after[0] if len(elo_after) > 1 else 1200.0),
                             'matches_played': len(match_data),

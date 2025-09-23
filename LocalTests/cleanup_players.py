@@ -43,7 +43,7 @@ def cleanup_duplicate_players():
             
             if short_players.exists() and full_players.exists():
                 if keep_full_name:
-                    # Delete the short name player (usually from elo_ratings.csv)
+                    # Delete the short name player (usually from elos.csv)
                     short_player = short_players.first()
                     full_player = full_players.first()
                     

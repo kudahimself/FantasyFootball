@@ -84,11 +84,11 @@ def check_elo_results():
         # Get top 10 players by Elo
         top_players = EloCalculation.objects.filter(
             week=4, season="2024-2025"
-        ).order_by('-elo_rating')[:10]
+        ).order_by('-elo')[:10]
         
         print("🏆 Top 10 Players by Elo:")
         for i, calc in enumerate(top_players, 1):
-            print(f"  {i:2d}. {calc.player_name}: {calc.elo_rating:.1f} (change: {calc.elo_change:+.1f})")
+            print(f"  {i:2d}. {calc.player_name}: {calc.elo:.1f} (change: {calc.elo_change:+.1f})")
         
         # Get some specific players we tested
         test_players = ['Viktor Gyökeres', 'Martin Ødegaard']
@@ -98,14 +98,14 @@ def check_elo_results():
                 calc = EloCalculation.objects.get(
                     player_name=player_name, week=4, season="2024-2025"
                 )
-                print(f"  {player_name}: {calc.elo_rating:.1f} (change: {calc.elo_change:+.1f}, matches: {calc.matches_played})")
+                print(f"  {player_name}: {calc.elo:.1f} (change: {calc.elo_change:+.1f}, matches: {calc.matches_played})")
             except EloCalculation.DoesNotExist:
                 print(f"  {player_name}: No record found")
         
         # Statistics
         total_calcs = EloCalculation.objects.filter(week=4, season="2024-2025").count()
         avg_elo = EloCalculation.objects.filter(week=4, season="2024-2025").aggregate(
-            avg_elo=models.Avg('elo_rating')
+            avg_elo=models.Avg('elo')
         )['avg_elo']
         
         print(f"\n📈 Statistics:")

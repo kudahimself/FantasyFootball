@@ -90,7 +90,7 @@ class Command(BaseCommand):
                 position = self.determine_player_position(calc.player_name, position_mapping)
                 
                 # Determine cost based on Elo (simplified logic)
-                cost = self.calculate_cost_from_elo(calc.elo_rating, position)
+                cost = self.calculate_cost_from_elo(calc.elo, position)
                 
                 # Create or update Player record
                 player, created = Player.objects.update_or_create(
@@ -98,7 +98,7 @@ class Command(BaseCommand):
                     week=week,
                     defaults={
                         'position': position,
-                        'elo': calc.elo_rating,
+                        'elo': calc.elo,
                         'cost': cost,
                         'team': self.get_player_team(calc.player_name),
                         'competition': 'Premier League',
@@ -178,20 +178,20 @@ class Command(BaseCommand):
         # Default fallback
         return 'Midfielder'
     
-    def calculate_cost_from_elo(self, elo_rating, position):
+    def calculate_cost_from_elo(self, elo, position):
         """
         Calculate player cost based on Elo rating and position.
         This is a simplified algorithm - you might want to make it more sophisticated.
         """
         # Base cost calculation
-        if elo_rating >= 2000:
-            base_cost = 12.0 + (elo_rating - 2000) / 100
-        elif elo_rating >= 1800:
-            base_cost = 9.0 + (elo_rating - 1800) / 100
-        elif elo_rating >= 1600:
-            base_cost = 6.0 + (elo_rating - 1600) / 100
-        elif elo_rating >= 1400:
-            base_cost = 4.5 + (elo_rating - 1400) / 100
+        if elo >= 2000:
+            base_cost = 12.0 + (elo - 2000) / 100
+        elif elo >= 1800:
+            base_cost = 9.0 + (elo - 1800) / 100
+        elif elo >= 1600:
+            base_cost = 6.0 + (elo - 1600) / 100
+        elif elo >= 1400:
+            base_cost = 4.5 + (elo - 1400) / 100
         else:
             base_cost = 4.0
         

@@ -13,7 +13,9 @@ Key features:
 - Realistic Elo ratings (Viktor Gyökeres: 2802.4, Mohamed Salah: 2461.0)
 """
 
+
 import time
+import logging
 from typing import Dict, List, Any, Optional
 from asgiref.sync import sync_to_async
 
@@ -56,7 +58,7 @@ def calculate_elo_change(current_elo: float, points: int, competition: str, k: i
     return new_elo
 
 
-async def calculate_elo_for_single_player(player_name: str, current_week: int = 4) -> Optional[Dict[str, Any]]:
+async def calculate_elo_for_single_player(player_name: str) -> Optional[Dict[str, Any]]:
     """
     Calculate Elo for a single player using EXACT same method as elo_model.py
     
@@ -70,75 +72,94 @@ async def calculate_elo_for_single_player(player_name: str, current_week: int = 
     
     try:
         from MyApi.models import Player, PlayerMatch, EloCalculation
-        
-        # Get all matches for this player, ordered by date
+
+        # Get all matches for this player, ordered by date (all history)
         matches = await sync_to_async(list)(
-            PlayerMatch.objects.filter(player_name=player_name)
-            .order_by('date')
+            PlayerMatch.objects.filter(player_name=player_name).order_by('date')
         )
-        
         if not matches:
             return None
-        
-        # Get player record
-        try:
-            player_obj = await sync_to_async(Player.objects.get)(
-                name=player_name, week=current_week
-            )
-        except Player.DoesNotExist:
+
+        # Get the latest Player record for this player (by week or date)
+        player_obj = await sync_to_async(Player.objects.filter(name=player_name).order_by('-week').first)()
+        if not player_obj:
             return None
         
         # Calculate Elo progression using EXACT same method as elo_model.py
         initial_elo = 1200.0  # Starting Elo rating - EXACT same as elo_model.py
         current_elo = initial_elo
-        
-        # First match starts at 1200 - EXACT same as elo_model.py
+
         if matches:
             matches[0].elo_before_match = initial_elo
-            
-            # Process first match
             if matches[0].points is not None:
                 new_elo = calculate_elo_change(current_elo, matches[0].points, matches[0].competition)
                 matches[0].elo_after_match = new_elo
                 current_elo = new_elo
             else:
                 matches[0].elo_after_match = initial_elo
-            
-            # Process remaining matches - EXACT same logic as elo_model.py
             for i in range(1, len(matches)):
-                Ra = current_elo  # Previous Elo
-                Pa = matches[i].points if matches[i].points is not None else 0  # Points from this match
-                League = matches[i].competition  # Competition
-                
+                Ra = current_elo
+                Pa = matches[i].points if matches[i].points is not None else 0
+                League = matches[i].competition
                 matches[i].elo_before_match = Ra
-                
-                # Calculate new Elo using EXACT same method as elo_model.py
                 new_elo = calculate_elo_change(Ra, Pa, League)
                 matches[i].elo_after_match = new_elo
                 current_elo = new_elo
-        
-        # Update player record
+
+        # Update the latest Player record with the final Elo
         final_elo = current_elo
         player_obj.elo = final_elo
-        
+
         # Note: Cost updates are handled separately by fpl_cost_updater.py
         # This keeps Elo calculations focused on ratings only
-        
-        # Save updates
+
+        # Save updates to PlayerMatch and Player
         await sync_to_async(PlayerMatch.objects.bulk_update)(
             matches, ['elo_before_match', 'elo_after_match']
         )
         await sync_to_async(player_obj.save)()
-        
-        # Create/update EloCalculation
+
+        # Create/update EloCalculation for the latest match's week/season
         if matches:
             latest_match = matches[-1]
+            # Try to get week from attribute, else parse from round_info
+            week = getattr(latest_match, 'week', None)
+            if week is None:
+                round_info = getattr(latest_match, 'round_info', '')
+                import re
+                match = re.search(r'(?:Matchweek|Week|GW|Gameweek)[^\d]*(\d+)', round_info, re.IGNORECASE)
+                if match:
+                    week = int(match.group(1))
+                else:
+                    raise ValueError(f"Could not infer week for player '{player_name}' from round_info: '{round_info}'")
+            # Update or create Player record for this week
+            from django.db import transaction
+            def update_player():
+                # Use transaction to avoid race conditions
+                with transaction.atomic():
+                    # Try to get cost from an existing Player record for this player
+                    existing_player = Player.objects.filter(name=player_name).order_by('-week').first()
+                    cost_value = existing_player.cost if existing_player else 0.0
+                    player_defaults = {
+                        'elo': final_elo,
+                        'team': getattr(latest_match, 'team', None),
+                        'position': getattr(latest_match, 'position', None),
+                        'competition': getattr(latest_match, 'competition', None),
+                        'cost': cost_value,
+                    }
+                    Player.objects.update_or_create(
+                        name=player_name,
+                        week=week,
+                        defaults=player_defaults
+                    )
+            await sync_to_async(update_player)()
+
             elo_calc, created = await sync_to_async(EloCalculation.objects.update_or_create)(
                 player_name=player_name,
-                week=current_week,
-                season="2024-2025",
+                week=week,
+                season=getattr(latest_match, 'season', None),
                 defaults={
-                    'elo_rating': final_elo,
+                    'elo': final_elo,
                     'previous_elo': initial_elo,
                     'elo_change': final_elo - initial_elo,
                     'matches_played': len(matches),
@@ -181,56 +202,47 @@ async def player_by_player_elo_calculation(current_week: int = None, show_progre
     """
     
     try:
-        from MyApi.models import Player, SystemSettings
-        
+        from MyApi.models import Player, PlayerMatch
+        # Setup logging
+        logger = logging.getLogger("elo_calculation")
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
         if show_progress:
-            print(f"🚀 Starting Player-by-Player Elo Calculation")
-        
+            print(f"🚀 Starting Player-by-Player Elo Calculation (all history)")
+        logger.info("🚀 Starting Player-by-Player Elo Calculation (all history)")
         start_time = time.time()
-        
-        # Get current week from system settings if not provided
-        if current_week is None:
-            settings = await sync_to_async(SystemSettings.get_settings)()
-            current_week = settings.current_gameweek
-        
-        # Get all unique players for the current week
+
+        # Get all unique player names from Player model (recommended)
         unique_players = await sync_to_async(list)(
-            Player.objects.filter(week=current_week).values_list('name', flat=True).distinct()
+            Player.objects.values_list('name', flat=True)
         )
-        
         total_players = len(unique_players)
-        
+
         if show_progress:
             print(f"👥 Total players to process: {total_players}")
             print(f"📅 Week: {current_week}")
             print()
-        
+
         processed_players = 0
         successful_players = 0
         failed_players = 0
-        
+
         # Process each player individually
         for i, player_name in enumerate(unique_players, 1):
-            result = await calculate_elo_for_single_player(player_name, current_week)
-            
+            result = await calculate_elo_for_single_player(player_name)
+
             if result:
                 if result['status'] == 'success':
                     successful_players += 1
-                    
-                    # Show progress every 50 players
-                    if show_progress and (i % 50 == 0 or i == total_players):
-                        print(f"✅ Player {i:3d}/{total_players}: {result['player_name'][:30]:<30} → Elo: {result['final_elo']:7.1f}")
                 else:
                     failed_players += 1
-                    if show_progress and failed_players <= 5:  # Show first few errors
+                    if show_progress and failed_players <= 5:
                         print(f"❌ Player {i:3d}/{total_players}: {result['player_name'][:30]:<30} → Error: {result['error']}")
-            
             processed_players += 1
-        
+
         # Summary
         end_time = time.time()
         duration = end_time - start_time
-        
+
         if show_progress:
             print()
             print("=" * 60)
@@ -240,31 +252,26 @@ async def player_by_player_elo_calculation(current_week: int = None, show_progre
             print(f"👥 Players processed: {processed_players}")
             print(f"✅ Successful calculations: {successful_players}")
             print(f"❌ Failed calculations: {failed_players}")
-            
             if successful_players > 0:
                 rate = successful_players / duration
                 print(f"🚀 Processing rate: {rate:.2f} players/second")
-            
             # Show top 10 players
             print()
             print("🏆 TOP 10 PLAYERS BY ELO RATING:")
             print("-" * 50)
-            
             try:
                 from MyApi.models import EloCalculation
                 top_players = await sync_to_async(list)(
                     EloCalculation.objects.filter(
-                        week=current_week, 
+                        week=current_week,
                         season="2024-2025"
-                    ).order_by('-elo_rating')[:10]
+                    ).order_by('-elo')[:10]
                 )
-                
                 for i, calc in enumerate(top_players, 1):
-                    print(f"{i:2d}. {calc.player_name[:30]:<30} {calc.elo_rating:7.1f}")
-                    
+                    print(f"{i:2d}. {calc.player_name[:30]:<30} {calc.elo:7.1f}")
             except Exception as e:
                 print(f"❌ Error retrieving top players: {e}")
-        
+
         return {
             'success': True,
             'players_processed': processed_players,
@@ -275,7 +282,6 @@ async def player_by_player_elo_calculation(current_week: int = None, show_progre
             'week': current_week,
             'processing_rate': successful_players / duration if duration > 0 else 0
         }
-        
     except Exception as e:
         return {
             'success': False,

@@ -317,7 +317,7 @@ def refresh_fixtures(request):
         
         # Count players with match data as a basic validation
         players_with_matches = Player.objects.filter(
-            elo_rating__gt=0
+            elo__gt=0
         ).count()
         
         # Update timestamp
@@ -366,7 +366,7 @@ def full_refresh(request):
             )
             
             # Validate players have ratings
-            players_with_ratings = Player.objects.filter(elo_rating__gt=0).count()
+            players_with_ratings = Player.objects.filter(elo__gt=0).count()
             
             messages.append(f'✓ Database validation complete for game week {current_week}')
             messages.append(f'✓ {total_players} players in database')
@@ -560,7 +560,7 @@ def recalculate_player_elos(request):
         from MyApi.utils.elo_calculator import player_by_player_elo_calculation
         
         # Run the player-by-player calculation
-        result = asyncio.run(player_by_player_elo_calculation(show_progress=False))
+        result = asyncio.run(player_by_player_elo_calculation(show_progress=True))
         
         if 'success' in result and result['success']:
             return JsonResponse({

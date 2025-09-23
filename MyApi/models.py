@@ -81,7 +81,7 @@ class EloCalculation(models.Model):
     player_name = models.CharField(max_length=200, db_index=True)
     week = models.IntegerField(db_index=True)
     season = models.CharField(max_length=20)  # e.g., "2024-2025"
-    elo_rating = models.FloatField()
+    elo = models.FloatField()
     previous_elo = models.FloatField(null=True, blank=True)
     elo_change = models.FloatField(default=0.0)
     
@@ -99,19 +99,19 @@ class EloCalculation(models.Model):
         indexes = [
             models.Index(fields=['week', 'season']),
             models.Index(fields=['player_name', 'week']),
-            models.Index(fields=['elo_rating']),
+            models.Index(fields=['elo']),
         ]
-        ordering = ['-week', '-elo_rating']
+    ordering = ['-week', '-elo']
     
     def __str__(self):
-        return f"{self.player_name} - Week {self.week} - Elo: {self.elo_rating}"
+        return f"{self.player_name} - Week {self.week} - Elo: {self.elo}"
     
     @classmethod
     def get_weekly_elos(cls, week, season):
         """
         Get all Elo ratings for a specific week and season.
         """
-        return cls.objects.filter(week=week, season=season).order_by('-elo_rating')
+        return cls.objects.filter(week=week, season=season).order_by('-elo')
     
     @classmethod
     def get_player_elo_history(cls, player_name, season=None):

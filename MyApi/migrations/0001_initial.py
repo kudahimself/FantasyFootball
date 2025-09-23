@@ -46,7 +46,7 @@ class Migration(migrations.Migration):
                 ("player_name", models.CharField(db_index=True, max_length=200)),
                 ("week", models.IntegerField(db_index=True)),
                 ("season", models.CharField(max_length=20)),
-                ("elo_rating", models.FloatField()),
+                ("elo", models.FloatField()),
                 ("previous_elo", models.FloatField(blank=True, null=True)),
                 ("elo_change", models.FloatField(default=0.0)),
                 (
@@ -67,7 +67,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "db_table": "elo_calculations",
-                "ordering": ["-week", "-elo_rating"],
+                "ordering": ["-week", "-elo"],
                 "indexes": [
                     models.Index(
                         fields=["week", "season"], name="elo_calcula_week_3ba714_idx"
@@ -77,7 +77,7 @@ class Migration(migrations.Migration):
                         name="elo_calcula_player__56dda7_idx",
                     ),
                     models.Index(
-                        fields=["elo_rating"], name="elo_calcula_elo_rat_5b3371_idx"
+                        fields=["elo"], name="elo_calcula_elo_rat_5b3371_idx"
                     ),
                 ],
                 "unique_together": {("player_name", "week", "season")},

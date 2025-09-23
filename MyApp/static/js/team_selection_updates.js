@@ -12,7 +12,7 @@ function updateSquadBadges() {
         console.log('updateSquadBadges: squad empty');
         return;
     }
-    const totalElo = squad.reduce((sum, p) => sum + (p.elo_rating || 0), 0);
+    const totalElo = squad.reduce((sum, p) => sum + (p.elo || 0), 0);
     const avgElo = totalElo / squad.length;
     const projectedPoints = squad.reduce((sum, p) => sum + (p.projected_points || 0), 0);
     const totalCost = squad.reduce((sum, p) => sum + (p.cost || 0), 0);
@@ -121,10 +121,10 @@ function applyChangesToBackend() {
     // Send the flat localTeam array; backend will group it
     const squadToSend = window.localTeam.map(player => {
         const playerObj = {};
-        ['id','name','position','team','cost','elo','elo_rating','projected_points'].forEach(k => {
+        ['id','name','position','team','cost','elo','elo','projected_points'].forEach(k => {
             if (player[k] !== undefined) playerObj[k] = player[k];
         });
-        if (playerObj.elo_rating && !playerObj.elo) playerObj.elo = playerObj.elo_rating;
+        if (playerObj.elo && !playerObj.elo) playerObj.elo = playerObj.elo;
         return playerObj;
     });
     const btn = document.getElementById('apply-changes-btn');

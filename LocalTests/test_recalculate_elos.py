@@ -160,7 +160,7 @@ def test_recalculate_elos():
     recent_elos = EloCalculation.objects.order_by('-id')[:3]
     print(f"\nRecent EloCalculation records:")
     for elo_calc in recent_elos:
-        print(f"  {elo_calc.player_name}: Elo={elo_calc.elo_rating}, Change={elo_calc.elo_change}, Matches={elo_calc.matches_played}")
+        print(f"  {elo_calc.player_name}: Elo={elo_calc.elo}, Change={elo_calc.elo_change}, Matches={elo_calc.matches_played}")
     
     # 6. Test error cases
     print("\n6. TESTING ERROR HANDLING:")
@@ -217,7 +217,7 @@ def test_specific_player_elo(player_name):
         try:
             elo_calc = EloCalculation.objects.get(player_name=player_name)
             print(f"\nEloCalculation record:")
-            print(f"  Current Elo: {elo_calc.elo_rating}")
+            print(f"  Current Elo: {elo_calc.elo}")
             print(f"  Previous Elo: {elo_calc.previous_elo}")
             print(f"  Elo Change: {elo_calc.elo_change}")
             print(f"  Matches Played: {elo_calc.matches_played}")

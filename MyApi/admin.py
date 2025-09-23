@@ -12,7 +12,7 @@ class PlayerMatchAdmin(admin.ModelAdmin):
 
 @admin.register(EloCalculation)
 class EloCalculationAdmin(admin.ModelAdmin):
-    list_display = ['player_name', 'week', 'season', 'elo_rating', 'elo_change']
+    list_display = ['player_name', 'week', 'season', 'elo', 'elo_change']
     list_filter = ['week', 'season']
     search_fields = ['player_name']
     ordering = ['-week', 'player_name']

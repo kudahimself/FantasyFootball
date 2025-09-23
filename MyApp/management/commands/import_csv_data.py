@@ -39,7 +39,7 @@ class Command(BaseCommand):
             self.import_player_data_from_elo_folder(week, season)
             
             # Import current Elo ratings
-            self.import_current_elo_ratings(week, season)
+            self.import_current_elos(week, season)
             
             # Update system settings
             self.update_system_settings(week, season)
@@ -167,7 +167,7 @@ class Command(BaseCommand):
                         week=week,
                         season=season,
                         defaults={
-                            'elo_rating': latest_elo,
+                            'elo': latest_elo,
                             'previous_elo': latest_elo,
                             'elo_change': 0.0,
                             'matches_played': 1 if matches_imported > 0 else 0,
@@ -189,9 +189,9 @@ class Command(BaseCommand):
         
         self.stdout.write(f'Imported {total_matches} matches for {players_processed} players')
     
-    def import_current_elo_ratings(self, week, season):
-        """Import current Elo ratings from elo_ratings.csv if available"""
-        csv_file = 'elo_ratings.csv'
+    def import_current_elos(self, week, season):
+        """Import current Elo ratings from elos.csv if available"""
+        csv_file = 'elos.csv'
         
         if not os.path.exists(csv_file):
             self.stdout.write(f'File {csv_file} not found, using Elo from individual files')
@@ -236,7 +236,7 @@ class Command(BaseCommand):
                     self.stdout.write(f'Error updating {player_name}: {str(e)}')
                     continue
         
-        self.stdout.write(f'Updated {updated_count} player ratings from elo_ratings.csv')
+        self.stdout.write(f'Updated {updated_count} player ratings from elos.csv')
     
     def update_system_settings(self, week, season):
         """Update system settings with current week and season"""

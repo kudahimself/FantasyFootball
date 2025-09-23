@@ -22,7 +22,7 @@ function renderSquad(squadData) {
             if (playerCount >= 11) subsCount++;
             totalPoints += Number(p.projected_points) || 0;
             totalCost += Number(p.cost) || 0;
-            totalElo += Number(p.elo_rating !== undefined ? p.elo_rating : (p.elo !== undefined ? p.elo : 0)) || 0;
+            totalElo += Number(p.elo !== undefined ? p.elo : (p.elo !== undefined ? p.elo : 0)) || 0;
             playerCount++;
         });
     });
@@ -101,7 +101,7 @@ function renderSquadFromApi(squadData) {
             card.innerHTML = `
                 <div class="player-name">${playerObj.name} <span class="player-badge">${positionMap[posKey]}</span></div>
                 <div class="player-team">${playerObj.team || ''}</div>
-                <div class="player-meta">ELO: ${playerObj.elo_rating !== undefined ? playerObj.elo_rating : (playerObj.elo !== undefined ? playerObj.elo : '--')}</div>
+                <div class="player-meta">ELO: ${playerObj.elo !== undefined ? playerObj.elo : (playerObj.elo !== undefined ? playerObj.elo : '--')}</div>
                 <div class="player-meta">Cost: £${playerObj.cost !== undefined ? playerObj.cost : '--'}m</div>
                 <div class="player-meta">Projected: ${playerObj.projected_points !== undefined ? playerObj.projected_points : '--'} pts</div>
             `;

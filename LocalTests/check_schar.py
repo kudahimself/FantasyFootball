@@ -15,7 +15,7 @@ print()
 players = Player.objects.filter(name__icontains='schar')
 print("📊 Players in Player table:")
 for player in players:
-    print(f"  - {player.name}: {player.elo_rating}")
+    print(f"  - {player.name}: {player.elo}")
 print()
 
 # Check PlayerMatch table

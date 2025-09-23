@@ -133,7 +133,7 @@ function updateSquadDisplay() {
                 // .player-points (ELO)
                 const points = document.createElement('div');
                 points.className = 'player-points';
-                const elo = player.elo_rating !== undefined ? player.elo_rating : (player.elo !== undefined ? player.elo : 0);
+                const elo = player.elo !== undefined ? player.elo : (player.elo !== undefined ? player.elo : 0);
                 points.textContent = `📊 ${Math.round(elo * 10) / 10}`;
                 stats.appendChild(points);
 
@@ -176,7 +176,7 @@ function renderPlayers() {
         const name = player.name || 'Unknown Player';
         const team = player.team || 'Unknown Team';
         const position = player.position || 'UNK';
-        const eloRating = player.elo_rating ? Math.round(player.elo_rating * 10) / 10 : 0;
+        const eloRating = player.elo ? Math.round(player.elo * 10) / 10 : 0;
         const cost = player.cost ? `£${player.cost}m` : '£0.0m';
         const projectedPoints = player.projected_points || 0;
         
@@ -300,7 +300,7 @@ function displayCurrentSquad() {
                 // .player-points (ELO)
                 const points = document.createElement('div');
                 points.className = 'player-points';
-                const elo = player.elo_rating !== undefined ? player.elo_rating : (player.elo !== undefined ? player.elo : 0);
+                const elo = player.elo !== undefined ? player.elo : (player.elo !== undefined ? player.elo : 0);
                 points.textContent = `📊 ${Math.round(elo * 10) / 10}`;
                 stats.appendChild(points);
 

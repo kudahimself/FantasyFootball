@@ -58,14 +58,14 @@ def verify_top_players():
     print("\n" + "=" * 80)
     
     # Check EloCalculation records
-    elo_calcs = EloCalculation.objects.filter(week=current_week).order_by('-elo_rating')[:5]
+    elo_calcs = EloCalculation.objects.filter(week=current_week).order_by('-elo')[:5]
     
     print("📈 EloCalculation Records (Top 5):")
     print(f"{'Player Name':<25} {'Elo':<8} {'Change':<8} {'Matches'}")
     print("-" * 50)
     
     for calc in elo_calcs:
-        print(f"{calc.player_name:<25} {calc.elo_rating:<8.1f} {calc.elo_change:<8.1f} {calc.matches_played}")
+        print(f"{calc.player_name:<25} {calc.elo:<8.1f} {calc.elo_change:<8.1f} {calc.matches_played}")
     
     print("\n🎉 Verification complete!")
 

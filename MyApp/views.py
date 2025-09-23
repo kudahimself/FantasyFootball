@@ -41,12 +41,12 @@ def team_selection(request):
                 'name': player.name,
                 'team': player.team or 'Unknown Team',
                 'position': position_map.get(player.position, player.position),
-                'elo_rating': round(float(player.elo), 1),
+                'elo': round(float(player.elo), 1),
                 'cost': float(player.cost),
                 'projected_points': projected_points,
             })
 
-        players_data.sort(key=lambda x: x['elo_rating'], reverse=True)
+        players_data.sort(key=lambda x: x['elo'], reverse=True)
 
         # Load current squad from database
         try:
