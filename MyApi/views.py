@@ -309,7 +309,7 @@ def refresh_fixtures(request):
 
     try:
         import asyncio
-        from MyApi.utils.projected_points_calculator2 import refresh_fixtures_util
+        from MyApi.utils.projected_points_calculator import refresh_fixtures_util
         from MyApi.models import SystemSettings, Player
         from django.utils import timezone
 
@@ -778,7 +778,7 @@ def calculate_projected_points(request):
     
     try:
         import asyncio
-        from MyApi.utils.projected_points_calculator2 import calculate_and_store_projected_points
+        from MyApi.utils.projected_points_calculator import calculate_and_store_projected_points
         
         # Always override existing projections to get fresh calculations
         result = asyncio.run(calculate_and_store_projected_points())

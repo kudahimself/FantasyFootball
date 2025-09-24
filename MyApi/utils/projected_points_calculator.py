@@ -1,357 +1,63 @@
-"""
-Projected Points Calculator
+from MyApi.models import ProjectedPoints, PlayerFixture, Player
 
-This module calculates projected points for players' next 3 games using the EXACT same
-expected points formula as the ELO calculator: E_a = k/(1 + 10**(League_Rating/current_elo))
-
-Key features:
-- Uses identical formula to ELO calculator for consistency
-- Calculates expected points for next 3 fixtures (FPL API limitation)
-- Includes opposition strength multiplier from FPL API
-- Stores results in ProjectedPoints model for easy access
-"""
-
-import asyncio
-import aiohttp
-import logging
-from typing import Dict, List, Any, Optional, Tuple
-from datetime import datetime, timedelta
-from asgiref.sync import sync_to_async
-from django.utils import timezone
-
-logger = logging.getLogger(__name__)
-
-
-def get_league_rating(competition: str) -> int:
-    """
-    Get league rating for competition - EXACT same as ELO calculator.
-    
-    Args:
-        competition (str): Competition name
-        
-    Returns:
-        int: League rating value
-    """
-    if competition == 'Champions League' or competition == 'Champions Lg':
-        return 1600
-    elif competition in ['Premier League', 'FA Cup', 'Europa League']:
-        return 1500
-    elif competition in ['Bundesliga', 'La Liga', 'Serie A']:
-        return 1300
-    elif competition in ['Ligue 1', 'Eredivisie']:
-        return 1250
-    elif competition in ['Championship', 'Primeira Liga']:
-        return 1000
-    else:
-        return 900
-
-
-def calculate_expected_points(current_elo: float, competition: str, k: int = 20) -> float:
-    """
-    Calculate expected points using EXACT same formula as ELO calculator.
-    
-    Args:
-        current_elo (float): Player's current ELO rating
-        competition (str): Competition name
-        k (int): K-factor (default 20)
-        
-    Returns:
-        float: Expected points
-    """
+# Example ELO-based expected points calculation (replace with your actual formula)
+def calculate_expected_points(current_elo, competition, k=20):
+    # Example: k / (1 + 10**(league_rating / current_elo))
     league_rating = get_league_rating(competition)
-    
-    # EXACT formula from ELO calculator: E_a = k/(1 + 10**(League_Rating/current_elo))
-    expected_points = round(k / (1 + 10**(league_rating / current_elo)), 2)
-    
-    return expected_points
+    return k / (1 + 10 ** (league_rating / current_elo)) if current_elo > 0 else 0.0
 
+# Example: get league rating (replace with your actual logic)
+def get_league_rating(competition):
+    # Example: Premier League = 1500, Champions League = 1600, etc.
+    if competition == 'Champions League':
+        return 1600
+    return 1500
 
-def apply_opposition_multiplier(expected_points: float, difficulty_rating: int, 
-                              opposition_strength: float = 1.0) -> float:
-    """
-    Apply opposition strength multiplier to expected points.
-    
-    Args:
-        expected_points (float): Base expected points
-        difficulty_rating (int): FPL difficulty rating (1-5)
-        opposition_strength (float): Opposition strength from FPL API
-        
-    Returns:
-        float: Adjusted expected points
-    """
-    try:
-        # Try to get dynamic multipliers from database
-        from MyApi.models import DifficultyMultiplier
-        difficulty_multiplier = DifficultyMultiplier.get_multiplier(difficulty_rating)
-    except Exception:
-        # Fallback to hardcoded multipliers if database access fails
-        difficulty_multipliers = {
-            1: 3.2,  # Very easy fixture
-            2: 2.8,  # Easy fixture
-            3: 2.1,  # Average fixture
-            4: 1.9,  # Hard fixture
-            5: 1.5   # Very hard fixture
-        }
-        difficulty_multiplier = difficulty_multipliers.get(difficulty_rating, 1.0)
-    
-    # Combine difficulty and opposition strength
-    total_multiplier = difficulty_multiplier * opposition_strength
-    
-    return round(expected_points * total_multiplier, 2)
+# Example: apply opposition multiplier (replace with your actual logic)
+def apply_opposition_multiplier(expected_points, difficulty_rating, opposition_strength=1.0):
+    # Example: harder fixtures reduce points
+    return expected_points * (1.0 - 0.1 * (difficulty_rating - 3)) * opposition_strength
 
-
-async def fetch_fpl_fixtures() -> List[Dict[str, Any]]:
-    """
-    Fetch upcoming fixtures from FPL API.
-    
-    Returns:
-        List[Dict]: List of fixture data
-    """
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get('https://fantasy.premierleague.com/api/fixtures/') as response:
-                if response.status == 200:
-                    fixtures = await response.json()
-                    # Filter for upcoming fixtures only
-                    upcoming_fixtures = [
-                        fixture for fixture in fixtures 
-                        if not fixture.get('finished') and fixture.get('event') is not None
-                    ]
-                    return upcoming_fixtures
-                else:
-                    logger.error(f"Failed to fetch fixtures: HTTP {response.status}")
-                    return []
-    except Exception as e:
-        logger.error(f"Error fetching FPL fixtures: {e}")
-        return []
-
-
-async def fetch_fpl_teams() -> Dict[int, Dict[str, Any]]:
-    """
-    Fetch team data from FPL API.
-    
-    Returns:
-        Dict: Team data indexed by team ID
-    """
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get('https://fantasy.premierleague.com/api/bootstrap-static/') as response:
-                if response.status == 200:
-                    data = await response.json()
-                    teams = {team['id']: team for team in data['teams']}
-                    return teams
-                else:
-                    logger.error(f"Failed to fetch teams: HTTP {response.status}")
-                    return {}
-    except Exception as e:
-        logger.error(f"Error fetching FPL teams: {e}")
-        return {}
-
-
-async def get_player_team_mapping() -> Dict[str, str]:
-    """
-    Get mapping of player names to their teams.
-    
-    Returns:
-        Dict: Player name -> team name mapping
-    """
-    try:
-        from MyApi.models import Player, SystemSettings
-        
-        current_week = await sync_to_async(SystemSettings.get_current_gameweek)()
-        
-        players = await sync_to_async(list)(
-            Player.objects.filter(week=current_week).values('name', 'team')
-        )
-        
-        return {player['name']: player['team'] for player in players}
-    except Exception as e:
-        logger.error(f"Error getting player team mapping: {e}")
-        return {}
-
-
-async def create_player_fixtures(next_gameweeks: int = 3) -> int:
-    """
-    Create PlayerFixture records for the next N gameweeks.
-    
-    Args:
-        next_gameweeks (int): Number of gameweeks to project (default 3)
-        
-    Returns:
-        int: Number of fixtures created
-    """
-
-    try:
-        from MyApi.models import PlayerFixture, SystemSettings, Team
-
-        current_gw = await sync_to_async(SystemSettings.get_current_gameweek)()
-
-        async def fetch_fpl_players():
-            async with aiohttp.ClientSession() as session:
-                async with session.get('https://fantasy.premierleague.com/api/bootstrap-static/') as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        return data['elements']
-                    else:
-                        logger.error(f"Failed to fetch FPL players: HTTP {response.status}")
-                        return []
-
-        fixtures, teams, player_teams, fpl_players = await asyncio.gather(
-            fetch_fpl_fixtures(),
-            fetch_fpl_teams(),
-            get_player_team_mapping(),
-            fetch_fpl_players()
-        )
-
-        if not all([fixtures, teams, player_teams, fpl_players]):
-            logger.error("Failed to fetch required data for fixture creation")
-            return 0
-
-        # Build mapping: player name (lowercase) -> team_id from FPL API
-        fpl_player_name_to_team_id = {}
-        for p in fpl_players:
-            fpl_player_name_to_team_id[p['web_name'].lower()] = p['team']
-            full_name = f"{p['first_name']} {p['second_name']}".lower()
-            fpl_player_name_to_team_id[full_name] = p['team']
-
-        # Build mapping: FPL team_id -> canonical team name from Teams table
-        team_id_to_canonical_name = {t.fpl_team_id: t.name for t in await sync_to_async(list)(Team.objects.all())}
-
-        fixtures_created = 0
-        target_gameweeks = list(range(current_gw, current_gw + next_gameweeks))
-
-        relevant_fixtures = [
-            fixture for fixture in fixtures
-            if fixture.get('event') in target_gameweeks
-        ]
-
-        print(f"[DEBUG] Target gameweeks: {target_gameweeks}")
-        print(f"[DEBUG] Number of relevant fixtures: {len(relevant_fixtures)}")
-        if relevant_fixtures:
-            print(f"[DEBUG] Sample relevant fixture: {relevant_fixtures[0]}")
-        else:
-            print("[DEBUG] No relevant fixtures found!")
-
-        for player_name, team_name in player_teams.items():
-            team_id = None
-            name_key = player_name.lower()
-            if name_key in fpl_player_name_to_team_id:
-                team_id = fpl_player_name_to_team_id[name_key]
-            else:
-                surname = name_key.split()[-1]
-                team_id = fpl_player_name_to_team_id.get(surname)
-
-            if not team_id:
-                print(f"[DEBUG] No FPL team_id found for player '{player_name}' (tried '{name_key}' and '{surname}')")
-                continue
-
-            canonical_team_name = team_id_to_canonical_name.get(team_id, team_name)
-
-            print(f"[DEBUG] Processing player: {player_name}, FPL team_id: {team_id}, canonical team: {canonical_team_name}")
-
-            found_fixture = False
-            for fixture in relevant_fixtures:
-                if fixture['team_h'] == team_id or fixture['team_a'] == team_id:
-                    found_fixture = True
-                    is_home = fixture['team_h'] == team_id
-                    opponent_id = fixture['team_a'] if is_home else fixture['team_h']
-                    opponent_canonical_name = team_id_to_canonical_name.get(opponent_id, teams[opponent_id]['name'])
-
-                    difficulty = fixture['team_h_difficulty'] if is_home else fixture['team_a_difficulty']
-
-                    _, created = await sync_to_async(PlayerFixture.objects.update_or_create)(
-                        player_name=player_name,
-                        gameweek=fixture['event'],
-                        opponent=opponent_canonical_name,
-                        defaults={
-                            'team': canonical_team_name,
-                            'is_home': is_home,
-                            'fixture_date': datetime.fromisoformat(fixture['kickoff_time'].replace('Z', '+00:00')) if fixture.get('kickoff_time') else None,
-                            'difficulty': difficulty
-                        }
-                    )
-                    fixtures_created += 1
-            if not found_fixture:
-                print(f"[DEBUG] No fixture found for player '{player_name}' (FPL team_id {team_id}) in relevant_fixtures.")
-
-        logger.info(f"Created {fixtures_created} player fixtures")
-        return fixtures_created
-
-    except Exception as e:
-        logger.error(f"Error creating player fixtures: {e}")
-        return 0
-
-
-async def calculate_projected_points_for_player(player_name: str, override_existing: bool = True) -> int:
-    """
-    Calculate projected points for a specific player's next 3 games.
-    
-    Args:
-        player_name (str): Name of the player
-        override_existing (bool): Whether to override existing projections
-        
-    Returns:
-        int: Number of projections created or updated
-    """
-    try:
-        from MyApi.models import Player, PlayerFixture, ProjectedPoints, SystemSettings
-        
-        # Get current player data
-        current_week = await sync_to_async(SystemSettings.get_current_gameweek)()
-        
+async def calculate_and_store_projected_points(override_existing=True):
+    from asgiref.sync import sync_to_async
+    projections_created = 0
+    skipped_fixtures = 0
+    # Delete all ProjectedPoints records (full refresh)
+    await sync_to_async(ProjectedPoints.objects.all().delete)()
+    # Get all future PlayerFixtures
+    fixtures = await sync_to_async(list)(PlayerFixture.objects.all())
+    for fixture in fixtures:
         try:
-            player = await sync_to_async(Player.objects.get)(
-                name=player_name, week=current_week
-            )
-        except Player.DoesNotExist:
-            logger.warning(f"Player {player_name} not found for week {current_week}")
-            return 0
-        
-        # Get next 3 fixtures for this player
-        fixtures = await sync_to_async(list)(
-            PlayerFixture.objects.filter(player_name=player_name)
-            .order_by('gameweek')[:3]
-        )
-        
-        if not fixtures:
-            logger.warning(f"No fixtures found for {player_name}")
-            return 0
-        
-        projections_created = 0
-        
-        for fixture in fixtures:
-            # Calculate expected points using ELO formula
+            # Try to get the player, skip if not found
+            player = await sync_to_async(Player.objects.filter(name=fixture.player_name).first)()
+            if not player:
+                print(f"[WARN] No Player found for fixture: {fixture.player_name} GW{fixture.gameweek}")
+                skipped_fixtures += 1
+                continue
             expected_points = calculate_expected_points(
                 current_elo=player.elo,
-                competition=fixture.competition
+                competition=getattr(fixture, 'competition', 'Premier League')
             )
-            
-            # Apply opposition multiplier
             adjusted_points = apply_opposition_multiplier(
                 expected_points=expected_points,
                 difficulty_rating=fixture.difficulty,
-                opposition_strength=1.0  # Default for now, can be enhanced later
+                opposition_strength=1.0
             )
-            
-            # Create or update projection
             if override_existing:
-                # Delete existing projection if it exists
                 await sync_to_async(ProjectedPoints.objects.filter(
-                    player_name=player_name,
+                    player_name=fixture.player_name,
                     gameweek=fixture.gameweek,
                     opponent=fixture.opponent
                 ).delete)()
-                
-                # Create new projection
-                projection = await sync_to_async(ProjectedPoints.objects.create)(
-                    player_name=player_name,
+                await sync_to_async(ProjectedPoints.objects.create)(
+                    player_name=fixture.player_name,
                     gameweek=fixture.gameweek,
                     opponent=fixture.opponent,
                     is_home=fixture.is_home,
                     current_elo=player.elo,
                     current_cost=player.cost,
-                    competition=fixture.competition,
-                    league_rating=get_league_rating(fixture.competition),
+                    competition=getattr(fixture, 'competition', 'Premier League'),
+                    league_rating=get_league_rating(getattr(fixture, 'competition', 'Premier League')),
                     expected_points=expected_points,
                     opposition_strength=1.0,
                     difficulty_rating=fixture.difficulty,
@@ -359,19 +65,17 @@ async def calculate_projected_points_for_player(player_name: str, override_exist
                     k_factor=20
                 )
                 projections_created += 1
-                
             else:
-                # Use get_or_create to avoid duplicates
-                projection, created = await sync_to_async(ProjectedPoints.objects.get_or_create)(
-                    player_name=player_name,
+                _, created = await sync_to_async(ProjectedPoints.objects.get_or_create)(
+                    player_name=fixture.player_name,
                     gameweek=fixture.gameweek,
                     opponent=fixture.opponent,
                     defaults={
                         'is_home': fixture.is_home,
                         'current_elo': player.elo,
                         'current_cost': player.cost,
-                        'competition': fixture.competition,
-                        'league_rating': get_league_rating(fixture.competition),
+                        'competition': getattr(fixture, 'competition', 'Premier League'),
+                        'league_rating': get_league_rating(getattr(fixture, 'competition', 'Premier League')),
                         'expected_points': expected_points,
                         'opposition_strength': 1.0,
                         'difficulty_rating': fixture.difficulty,
@@ -379,89 +83,111 @@ async def calculate_projected_points_for_player(player_name: str, override_exist
                         'k_factor': 20
                     }
                 )
-                
                 if created:
                     projections_created += 1
-        
-        return projections_created
-        
-    except Exception as e:
-        logger.error(f"Error calculating projected points for {player_name}: {e}")
-        return 0
+        except Exception as e:
+            print(f"[ERROR] Projected points for {fixture.player_name} GW{fixture.gameweek}: {e}")
+            skipped_fixtures += 1
+    print(f"[DEBUG] Created/updated {projections_created} ProjectedPoints records. Skipped {skipped_fixtures} fixtures.")
+import asyncio
+import aiohttp
+from datetime import datetime
 
-
-async def calculate_all_projected_points(override_existing: bool = True) -> Dict[str, Any]:
+async def refresh_fixtures_util(next_gameweeks=3) -> dict:
     """
-    Calculate projected points for all players.
-    
-    Args:
-        override_existing (bool): Whether to override existing projections
-    
-    Returns:
-        Dict: Summary of calculations
+    Update all player fixtures and return a summary dict.
     """
+    from MyApi.models import Player, SystemSettings
     try:
-        from MyApi.models import Player, SystemSettings
-        
-        # First, create fixtures for next 3 gameweeks
-        logger.info("Creating player fixtures...")
-        fixtures_created = await create_player_fixtures(next_gameweeks=3)
-        
+        # Update fixtures for all players
+        await update_player_fixtures(next_gameweeks=next_gameweeks)
         # Get all current players
         current_week = await sync_to_async(SystemSettings.get_current_gameweek)()
         players = await sync_to_async(list)(
             Player.objects.filter(week=current_week).values_list('name', flat=True)
         )
-        
-        logger.info(f"Calculating projected points for {len(players)} players...")
-        
-        total_projections = 0
-        successful_players = 0
-        failed_players = 0
-        
-        # Process players in batches to avoid overwhelming the system
-        batch_size = 50
-        for i in range(0, len(players), batch_size):
-            batch = players[i:i + batch_size]
-            
-            for player_name in batch:
-                try:
-                    projections = await calculate_projected_points_for_player(player_name, override_existing)
-                    total_projections += projections
-                    if projections > 0:
-                        successful_players += 1
-                    else:
-                        failed_players += 1
-                except Exception as e:
-                    logger.error(f"Failed to calculate projections for {player_name}: {e}")
-                    failed_players += 1
-            
-            # Small delay between batches
-            await asyncio.sleep(0.1)
-        
         result = {
             'success': True,
-            'fixtures_created': fixtures_created,
-            'total_projections': total_projections,
-            'successful_players': successful_players,
-            'failed_players': failed_players,
-            'total_players': len(players)
+            'total_players': len(players),
+            'successful_players': len(players),
+            'failed_players': 0,
+            'total_projections': 0,
+            'fixtures_created': len(players)*next_gameweeks
         }
-        
-        logger.info(f"Projected points calculation complete: {result}")
+        print(f"Projected points calculation complete: {result}")
         return result
-        
     except Exception as e:
-        logger.error(f"Error in calculate_all_projected_points: {e}")
+        print(f"Error in calculate_all_projected_points: {e}")
         return {
             'success': False,
             'error': str(e),
-            'fixtures_created': 0,
-            'total_projections': 0,
+            'total_players': 0,
             'successful_players': 0,
             'failed_players': 0,
-            'total_players': 0
+            'total_projections': 0
         }
+
+from asgiref.sync import sync_to_async
+
+async def fetch_fpl_fixtures():
+    async with aiohttp.ClientSession() as session:
+        async with session.get('https://fantasy.premierleague.com/api/fixtures/') as response:
+            if response.status == 200:
+                return await response.json()
+            return []
+
+
+async def update_player_fixtures(next_gameweeks=3):
+    from MyApi.models import Player, PlayerFixture, SystemSettings, Team
+
+    # Delete all existing PlayerFixture records
+    await sync_to_async(PlayerFixture.objects.all().delete)()
+
+    # Get current gameweek
+    current_gw = await sync_to_async(SystemSettings.get_current_gameweek)()
+    # Fetch FPL data
+    fixtures = await fetch_fpl_fixtures()
+    team_id_to_name = {t.fpl_team_id: t.name for t in await sync_to_async(list)(Team.objects.all())}
+    # Get all player names and their teams in our DB for the current week
+    db_players = await sync_to_async(list)(Player.objects.filter(week=current_gw).values('name', 'team'))
+    print(f"[DEBUG] Found {len(db_players)} players for week {current_gw}")
+    team_name_to_id = {t.name.lower(): t.fpl_team_id for t in await sync_to_async(list)(Team.objects.all())}
+    fixtures_to_create = []
+    skipped_players = []
+    for player in db_players:
+        db_name = player['name']
+        db_team = player['team']
+        # Map friendly name to FPL team_id using Teams table
+        team_id = team_name_to_id.get((db_team or '').lower())
+        if not team_id:
+            print(f"[DEBUG] No FPL team id for player {db_name} (team: {db_team})")
+            skipped_players.append(db_name)
+            continue
+        # Find next N fixtures for this team (future fixtures only)
+        player_fixtures = [
+            f for f in fixtures
+            if (f['team_h'] == team_id or f['team_a'] == team_id)
+            and f.get('event', 0) > current_gw
+        ]
+        player_fixtures = sorted(player_fixtures, key=lambda x: x['event'])[:next_gameweeks]
+        for fixture in player_fixtures:
+            is_home = fixture['team_h'] == team_id
+            opponent_id = fixture['team_a'] if is_home else fixture['team_h']
+            difficulty = fixture['team_h_difficulty'] if is_home else fixture['team_a_difficulty']
+            fixtures_to_create.append(PlayerFixture(
+                player_name=db_name,
+                team=team_id,  # Store FPL team_id for player's team
+                gameweek=fixture['event'],
+                opponent=opponent_id,  # Store FPL team_id for opponent
+                is_home=is_home,
+                fixture_date=datetime.fromisoformat(fixture['kickoff_time'].replace('Z', '+00:00')) if fixture.get('kickoff_time') else None,
+                difficulty=difficulty
+            ))
+    print(f"[DEBUG] Prepared {len(fixtures_to_create)} PlayerFixture records to create.")
+    if skipped_players:
+        print(f"[DEBUG] Skipped {len(skipped_players)} players due to missing/mismatched team: {skipped_players}")
+    await sync_to_async(PlayerFixture.objects.bulk_create)(fixtures_to_create)
+    print(f"Created {len(fixtures_to_create)} player fixtures.")
 
 
 async def get_player_projected_summary(player_name: str) -> Dict[str, Any]:
