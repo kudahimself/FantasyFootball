@@ -222,15 +222,17 @@ function displayProjectedPoints(data) {
         const venue = projection.is_home ? 'Home' : 'Away';
         const venueIcon = projection.is_home ? 'fa-home' : 'fa-plane';
         const difficultyColor = getDifficultyColor(projection.difficulty);
-        
+        // Round points to 1 decimal place
+        const expectedPoints = Number(projection.expected_points).toFixed(1);
+        const adjustedPoints = Number(projection.adjusted_points).toFixed(1);
         html += `
             <tr>
                 <td><strong>GW${projection.gameweek}</strong></td>
                 <td>${projection.opponent}</td>
                 <td><i class="fas ${venueIcon}"></i> ${venue}</td>
                 <td><span class="badge ${difficultyColor}">${projection.difficulty}</span></td>
-                <td>${projection.expected_points}</td>
-                <td><strong>${projection.adjusted_points}</strong></td>
+                <td>${expectedPoints}</td>
+                <td><strong>${adjustedPoints}</strong></td>
             </tr>
         `;
     });

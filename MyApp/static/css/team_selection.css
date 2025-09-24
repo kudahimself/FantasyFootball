@@ -20,6 +20,7 @@
     margin-bottom: 30px;
     width: 100%;
     min-height: 700px;
+    max-height: 1000px;
     padding: 5px; /* Add 5px padding around the container */
     margin-top: 5px; /* Add space above the team selection pane for nav separation */
 }

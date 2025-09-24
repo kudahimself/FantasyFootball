@@ -26,39 +26,55 @@ from MyApi.models import PlayerMatch, PlayerFixture
 
 def get_opponent_difficulty_mapping() -> Dict[str, int]:
     """
-    Get opponent difficulty mapping from PlayerFixture model.
-    Returns a dictionary mapping opponent team names to their FPL difficulty ratings.
+    Build a mapping from opponent team short name to FPL difficulty rating
+    using PlayerFixture data and TEAM_ALIASES mapping.
+    Returns:
+        Dict[str, int]: e.g. {'LIV': 2, 'MCI': 5, ...}
     """
-    # Get all unique opponent-difficulty pairs from PlayerFixture
-    fixtures = PlayerFixture.objects.values('opponent', 'difficulty').distinct()
+    TEAM_ALIASES = {
+        'LIV': '12',
+        'MCI': '13',
+        'MUN': '14',
+        'ARS': '1',
+        'CHE': '7',
+        'TOT': '18',
+        'NEW': '15',
+        'AVL': '2',
+        'BHA': '6',
+        'WHU': '19',
+        'FUL': '10',
+        'CRY': '8',
+        'BRE': '5',
+        'BOU': '4',
+        'WOL': '20',
+        'EVE': '9',
+        'NFO': '16',
+        'BUR': '3',
+        'SUN': '17',
+        'LEE': '11',
+        # Add more aliases as needed
+    }
+    # Reverse mapping: team_id -> short_name
+    ID_TO_SHORT = {v: k for k, v in TEAM_ALIASES.items()}
+    print(ID_TO_SHORT, 'ID_TO_SHORT')
+
+    mapping = {}
+    # Get all unique (opponent_team_id, difficulty) pairs from PlayerFixture
+    fixtures = PlayerFixture.objects.values_list('opponent', 'difficulty').distinct()
+    print(fixtures)
+    for team_id, difficulty in fixtures:
+        print('\n')
+        print('team_id',team_id,
+              'difficulty',difficulty)
+        short_name = ID_TO_SHORT[team_id]
+        print(short_name)
+        if short_name and difficulty:
+            mapping[short_name] = difficulty
     
-    opponent_difficulties = {}
+    print(mapping)
+    return mapping
     
-    for fixture in fixtures:
-        opponent = fixture['opponent']
-        difficulty = fixture['difficulty']
-        
-        if opponent and difficulty:
-            # If we have multiple difficulty ratings for the same opponent, take the most common one
-            if opponent in opponent_difficulties:
-                # Keep track of all difficulties for this opponent
-                if isinstance(opponent_difficulties[opponent], list):
-                    opponent_difficulties[opponent].append(difficulty)
-                else:
-                    opponent_difficulties[opponent] = [opponent_difficulties[opponent], difficulty]
-            else:
-                opponent_difficulties[opponent] = difficulty
-    
-    # Resolve multiple difficulties by taking the most common one
-    final_mapping = {}
-    for opponent, difficulties in opponent_difficulties.items():
-        if isinstance(difficulties, list):
-            # Take the most common difficulty
-            final_mapping[opponent] = max(set(difficulties), key=difficulties.count)
-        else:
-            final_mapping[opponent] = difficulties
-    
-    return final_mapping
+
 
 
 def calculate_expected_points(elo: float, opponent_difficulty: int, competition: str = 'Premier League') -> float:
@@ -111,6 +127,7 @@ def analyze_difficulty_multipliers() -> Dict[int, float]:
     # Get opponent difficulty mapping from FPL data
     print("Getting FPL difficulty ratings...")
     opponent_difficulties = get_opponent_difficulty_mapping()
+    print(opponent_difficulties)
     
     if not opponent_difficulties:
         print("No FPL difficulty data found")
@@ -546,8 +563,9 @@ def recalculate_difficulty_multipliers() -> Dict[str, Any]:
         from django.db.models import Q
         
         # Get all players who have matches in 2025-2026 season
+        # Handle possible season string variations like '2025-26' or '2025-2026'
         players_with_matches = PlayerMatch.objects.filter(
-            season='2025-2026',
+            Q(season='2025-2026') | Q(season='2025-26'),
             minutes_played__gt=0
         ).values_list('player_name', flat=True).distinct()
         
@@ -568,11 +586,12 @@ def recalculate_difficulty_multipliers() -> Dict[str, Any]:
             # Get last 4 games for this player (most recent first)
             last_4_games = PlayerMatch.objects.filter(
                 player_name=player_name,
-                season='2025-2026',
+                season='2025-26',
                 minutes_played__gt=0,
                 elo_before_match__isnull=False,
                 points__isnull=False
             ).order_by('-date')[:4]
+            
             
             for match in last_4_games:
                 # Try to match opponent with difficulty rating

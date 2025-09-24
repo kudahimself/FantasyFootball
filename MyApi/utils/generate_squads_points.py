@@ -103,8 +103,9 @@ class SquadSelectorPoints:
         qs = Player.objects.filter(position=position, week=self.current_week)
         player_data = []
         for p in qs:
-            proj = ProjectedPoints.objects.filter(player_name=p.name).order_by('-gameweek').first()
-            projected_points = float(proj.adjusted_expected_points) if proj else 0.0
+            # Get the sum of projected points for the next 3 fixtures
+            projections = ProjectedPoints.objects.filter(player_name=p.name).order_by('gameweek')[:3]
+            projected_points = sum(float(proj.adjusted_expected_points) for proj in projections) if projections else 0.0
             player_data.append({
                 'Player': p.name,
                 'Position': p.position,

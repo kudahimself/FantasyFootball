@@ -16,7 +16,8 @@ def team_selection(request):
     Renders player list on the server-side like player_ratings.
     """
     try:
-        week = 4  # Configurable week
+        from MyApi.models import SystemSettings
+        week = SystemSettings.get_settings().current_gameweek
         players_queryset = Player.objects.filter(week=week)
 
         if not players_queryset.exists():
@@ -101,7 +102,10 @@ def player_ratings(request):
             return render(request, 'player_ratings.html', context)
 
         # Import models for fixtures and projected points
-        from MyApi.models import PlayerFixture, ProjectedPoints
+        from MyApi.models import PlayerFixture, ProjectedPoints, Team
+
+        # Build a mapping from FPL team ID (as string) to team name
+        team_id_to_name = {str(team.fpl_team_id): team.name for team in Team.objects.all()}
 
         # Convert to list of dictionaries for template
         players_data = []
@@ -120,11 +124,13 @@ def player_ratings(request):
                 fixtures = PlayerFixture.objects.filter(
                     player_name=player.name
                 ).order_by('gameweek', 'fixture_date')[:3]
-                
+
                 for fixture in fixtures:
                     home_away = "vs" if fixture.is_home else "@"
+                    # Substitute team ID with name if possible
+                    opponent_display = team_id_to_name.get(str(fixture.opponent), fixture.opponent)
                     next_fixtures.append({
-                        'text': f"{home_away} {fixture.opponent}",
+                        'text': f"{home_away} {opponent_display}",
                         'difficulty': fixture.difficulty  # 1-5 FPL difficulty rating
                     })
             except Exception as e:
@@ -133,11 +139,11 @@ def player_ratings(request):
                     {'text': "No fixtures", 'difficulty': 3},
                     {'text': "No fixtures", 'difficulty': 3}
                 ]
-            
+
             # Ensure we have exactly 3 fixtures (pad with "No fixtures" if needed)
             while len(next_fixtures) < 3:
                 next_fixtures.append({'text': "No fixtures", 'difficulty': 3})
-            
+
             player_data = {
                 'name': player.name,
                 'position': player.position,
@@ -153,15 +159,15 @@ def player_ratings(request):
                 'fixture_3_difficulty': next_fixtures[2]['difficulty'],
             }
             players_data.append(player_data)
-        
+
         # Sort by Elo rating by default (highest first)
         players_data.sort(key=lambda x: x['elo'], reverse=True)
-        
+
         context = {
             'players': players_data,
             'total_players': len(players_data)
         }
-        
+
     except Exception as e:
         print(f"Error loading player data: {e}")
         context = {
@@ -169,7 +175,7 @@ def player_ratings(request):
             'total_players': 0,
             'error': str(e)
         }
-    
+
     return render(request, 'player_ratings.html', context)
 
 
