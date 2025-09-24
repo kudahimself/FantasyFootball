@@ -1,5 +1,20 @@
+
 from django.db import models
 import json
+
+class Team(models.Model):
+    """
+    Canonical mapping of FPL team ID to team name for consistent use across the app.
+    """
+    fpl_team_id = models.IntegerField(unique=True, db_index=True)
+    name = models.CharField(max_length=100, unique=True, db_index=True)
+
+    class Meta:
+        db_table = 'teams'
+        ordering = ['fpl_team_id']
+
+    def __str__(self):
+        return f"{self.name} (FPL ID: {self.fpl_team_id})"
 
 # Create your models here.
 

@@ -86,10 +86,12 @@ def player_ratings(request):
     Supports filtering and sorting functionality.
     """
     try:
-        # Load data from database instead of SquadSelector
-        week = 4  # You can make this configurable later
+        # Load data from database using current gameweek from SystemSettings
+        from MyApi.models import SystemSettings
+        week = SystemSettings.get_settings().current_gameweek
         players_queryset = Player.objects.filter(week=week)
-        
+        print(f"[DEBUG] player_ratings: current_week from SystemSettings = {week}")
+
         if not players_queryset.exists():
             context = {
                 'players': [],
@@ -97,10 +99,10 @@ def player_ratings(request):
                 'error': f'No player data found for week {week}. Please import data first.'
             }
             return render(request, 'player_ratings.html', context)
-        
+
         # Import models for fixtures and projected points
         from MyApi.models import PlayerFixture, ProjectedPoints
-        
+
         # Convert to list of dictionaries for template
         players_data = []
         for player in players_queryset:
@@ -111,7 +113,7 @@ def player_ratings(request):
                 projected_points = round(total_projected, 1) if total_projected else 0
             except Exception as e:
                 projected_points = 0
-            
+
             # Get next 3 fixtures
             next_fixtures = []
             try:

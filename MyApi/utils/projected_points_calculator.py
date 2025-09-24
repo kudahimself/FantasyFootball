@@ -180,71 +180,103 @@ async def create_player_fixtures(next_gameweeks: int = 3) -> int:
     Returns:
         int: Number of fixtures created
     """
+
     try:
-        from MyApi.models import PlayerFixture, SystemSettings
-        
-        # Get current gameweek
+        from MyApi.models import PlayerFixture, SystemSettings, Team
+
         current_gw = await sync_to_async(SystemSettings.get_current_gameweek)()
-        
-        # Fetch data from FPL API
-        fixtures, teams, player_teams = await asyncio.gather(
+
+        async def fetch_fpl_players():
+            async with aiohttp.ClientSession() as session:
+                async with session.get('https://fantasy.premierleague.com/api/bootstrap-static/') as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        return data['elements']
+                    else:
+                        logger.error(f"Failed to fetch FPL players: HTTP {response.status}")
+                        return []
+
+        fixtures, teams, player_teams, fpl_players = await asyncio.gather(
             fetch_fpl_fixtures(),
             fetch_fpl_teams(),
-            get_player_team_mapping()
+            get_player_team_mapping(),
+            fetch_fpl_players()
         )
-        
-        if not all([fixtures, teams, player_teams]):
+
+        if not all([fixtures, teams, player_teams, fpl_players]):
             logger.error("Failed to fetch required data for fixture creation")
             return 0
-        
-        # Create reverse team mapping (team name -> team ID)
-        team_name_to_id = {}
-        for team_id, team_data in teams.items():
-            team_name_to_id[team_data['name']] = team_id
-        
+
+        # Build mapping: player name (lowercase) -> team_id from FPL API
+        fpl_player_name_to_team_id = {}
+        for p in fpl_players:
+            fpl_player_name_to_team_id[p['web_name'].lower()] = p['team']
+            full_name = f"{p['first_name']} {p['second_name']}".lower()
+            fpl_player_name_to_team_id[full_name] = p['team']
+
+        # Build mapping: FPL team_id -> canonical team name from Teams table
+        team_id_to_canonical_name = {t.fpl_team_id: t.name for t in await sync_to_async(list)(Team.objects.all())}
+
         fixtures_created = 0
         target_gameweeks = list(range(current_gw, current_gw + next_gameweeks))
-        
-        # Filter fixtures for target gameweeks
+
         relevant_fixtures = [
-            fixture for fixture in fixtures 
+            fixture for fixture in fixtures
             if fixture.get('event') in target_gameweeks
         ]
-        
-        # Create PlayerFixture records
+
+        print(f"[DEBUG] Target gameweeks: {target_gameweeks}")
+        print(f"[DEBUG] Number of relevant fixtures: {len(relevant_fixtures)}")
+        if relevant_fixtures:
+            print(f"[DEBUG] Sample relevant fixture: {relevant_fixtures[0]}")
+        else:
+            print("[DEBUG] No relevant fixtures found!")
+
         for player_name, team_name in player_teams.items():
-            team_id = team_name_to_id.get(team_name)
+            team_id = None
+            name_key = player_name.lower()
+            if name_key in fpl_player_name_to_team_id:
+                team_id = fpl_player_name_to_team_id[name_key]
+            else:
+                surname = name_key.split()[-1]
+                team_id = fpl_player_name_to_team_id.get(surname)
+
             if not team_id:
+                print(f"[DEBUG] No FPL team_id found for player '{player_name}' (tried '{name_key}' and '{surname}')")
                 continue
-                
+
+            canonical_team_name = team_id_to_canonical_name.get(team_id, team_name)
+
+            print(f"[DEBUG] Processing player: {player_name}, FPL team_id: {team_id}, canonical team: {canonical_team_name}")
+
+            found_fixture = False
             for fixture in relevant_fixtures:
                 if fixture['team_h'] == team_id or fixture['team_a'] == team_id:
+                    found_fixture = True
                     is_home = fixture['team_h'] == team_id
                     opponent_id = fixture['team_a'] if is_home else fixture['team_h']
-                    opponent_name = teams[opponent_id]['name']
-                    
-                    # Get fixture difficulty
+                    opponent_canonical_name = team_id_to_canonical_name.get(opponent_id, teams[opponent_id]['name'])
+
                     difficulty = fixture['team_h_difficulty'] if is_home else fixture['team_a_difficulty']
-                    
-                    # Create or update fixture
-                    fixture_obj, created = await sync_to_async(PlayerFixture.objects.get_or_create)(
+
+                    _, created = await sync_to_async(PlayerFixture.objects.update_or_create)(
                         player_name=player_name,
                         gameweek=fixture['event'],
-                        opponent=opponent_name,
+                        opponent=opponent_canonical_name,
                         defaults={
-                            'team': team_name,
+                            'team': canonical_team_name,
                             'is_home': is_home,
                             'fixture_date': datetime.fromisoformat(fixture['kickoff_time'].replace('Z', '+00:00')) if fixture.get('kickoff_time') else None,
                             'difficulty': difficulty
                         }
                     )
-                    
-                    if created:
-                        fixtures_created += 1
-        
+                    fixtures_created += 1
+            if not found_fixture:
+                print(f"[DEBUG] No fixture found for player '{player_name}' (FPL team_id {team_id}) in relevant_fixtures.")
+
         logger.info(f"Created {fixtures_created} player fixtures")
         return fixtures_created
-        
+
     except Exception as e:
         logger.error(f"Error creating player fixtures: {e}")
         return 0

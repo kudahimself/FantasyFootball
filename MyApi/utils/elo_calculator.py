@@ -137,21 +137,21 @@ async def calculate_elo_for_single_player(player_name: str) -> Optional[Dict[str
             def update_player():
                 # Use transaction to avoid race conditions
                 with transaction.atomic():
-                    # Try to get cost from an existing Player record for this player
-                    existing_player = Player.objects.filter(name=player_name).order_by('-week').first()
-                    cost_value = existing_player.cost if existing_player else 0.0
-                    player_defaults = {
-                        'elo': final_elo,
-                        'team': getattr(latest_match, 'team', None),
-                        'position': getattr(latest_match, 'position', None),
-                        'competition': getattr(latest_match, 'competition', None),
-                        'cost': cost_value,
-                    }
-                    Player.objects.update_or_create(
-                        name=player_name,
-                        week=week,
-                        defaults=player_defaults
-                    )
+                    # Always update the latest Player record for this player, set week to the new value
+                    player = Player.objects.filter(name=player_name).order_by('-week').first()
+                    if player:
+                        player.elo = final_elo
+                        player.week = week  # update to the new/current week
+                        # Optionally update cost if needed
+                        if player.cost is not None:
+                            pass  # keep existing cost
+                        else:
+                            # fallback to previous cost if available
+                            existing_player = Player.objects.filter(name=player_name).order_by('-week').first()
+                            player.cost = existing_player.cost if existing_player else 0.0
+                        player.save(update_fields=['elo', 'cost', 'week'])
+                    else:
+                        print(f"[WARN] No Player record found for {player_name}, skipping update.")
             await sync_to_async(update_player)()
 
             elo_calc, created = await sync_to_async(EloCalculation.objects.update_or_create)(

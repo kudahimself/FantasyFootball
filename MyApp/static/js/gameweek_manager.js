@@ -2,6 +2,49 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeGameWeekManager();
+    // Add event listener for Refresh Player Data button
+    const refreshBtn = document.getElementById('refresh-player-data-btn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function() {
+            refreshBtn.disabled = true;
+            const originalText = refreshBtn.innerHTML;
+            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+            fetch('/api/refresh_players/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showStatusMessage(data.message || 'Player data refreshed!', 'success');
+                } else {
+                    showStatusMessage(data.error || 'Failed to refresh player data.', 'error');
+                }
+                // Optionally update last update timestamp
+                if (data.stats && data.stats.last_update) {
+                    const lastUpdateElement = document.getElementById('last-update');
+                    if (lastUpdateElement) {
+                        lastUpdateElement.textContent = data.stats.last_update;
+                    }
+                } else if (data.last_update) {
+                    const lastUpdateElement = document.getElementById('last-update');
+                    if (lastUpdateElement) {
+                        lastUpdateElement.textContent = data.last_update;
+                    }
+                }
+            })
+            .catch(error => {
+                showStatusMessage('Error refreshing player data.', 'error');
+            })
+            .finally(() => {
+                refreshBtn.disabled = false;
+                refreshBtn.innerHTML = originalText;
+            });
+        });
+    }
 });
 
 function initializeGameWeekManager() {

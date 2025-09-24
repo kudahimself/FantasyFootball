@@ -94,32 +94,32 @@ def get_all_players(request):
     """
     try:
         from MyApi.models import Player, SystemSettings
-        
         # Get current week from system settings
         settings = SystemSettings.get_settings()
         current_week = settings.current_gameweek
-        
+        print(f"[DEBUG] get_all_players: current_week from SystemSettings = {current_week}")
+
         # Get players from database for current week
         goalkeepers = Player.objects.filter(
             position='Keeper', 
             week=current_week
         ).order_by('-elo')[:20]
-        
+
         defenders = Player.objects.filter(
             position='Defender', 
             week=current_week
         ).order_by('-elo')[:50]
-        
+
         midfielders = Player.objects.filter(
             position='Midfielder', 
             week=current_week
         ).order_by('-elo')[:50]
-        
+
         forwards = Player.objects.filter(
             position='Attacker', 
             week=current_week
         ).order_by('-elo')[:30]
-        
+
         # Convert to JSON-friendly format
         all_players = {
             "goalkeepers": [
@@ -159,9 +159,9 @@ def get_all_players(request):
                 for player in forwards
             ]
         }
-        
+
         return JsonResponse({'players': all_players})
-        
+
     except Exception as e:
         return JsonResponse({'error': f'Failed to load players: {str(e)}'}, status=500)
 
@@ -294,44 +294,53 @@ def refresh_players(request):
             'success': False,
             'error': f'Failed to refresh player data: {str(e)}'
         })
-        
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+
+
 
 
 @csrf_exempt
 def refresh_fixtures(request):
     """
-    API endpoint to refresh fixture data.
+    API endpoint to refresh fixtures and projected points for all players' next 3 games.
+    Updates last_fixtures_update timestamp and validates player/match data.
     """
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Only POST method allowed'})
-    
+
     try:
+        import asyncio
+        from MyApi.utils.projected_points_calculator2 import refresh_fixtures_util
         from MyApi.models import SystemSettings, Player
         from django.utils import timezone
-        from django.db.models import Count
-        
-        # Validate database state for fixtures/matches
+
+        # Run the async refresh for fixtures and projections
+        result = asyncio.run(refresh_fixtures_util())
+
+        # Update fixtures update timestamp and validate player data
         settings = SystemSettings.get_settings()
-        
-        # Count players with match data as a basic validation
-        players_with_matches = Player.objects.filter(
-            elo__gt=0
-        ).count()
-        
-        # Update timestamp
+        players_with_matches = Player.objects.filter(elo__gt=0).count()
         settings.last_fixtures_update = timezone.now()
         settings.save()
-        
-        return JsonResponse({
-            'success': True,
-            'message': f'Fixtures validated successfully - {players_with_matches} players with data',
+
+        # Merge results for a single response
+        response = {
+            'success': result.get('success', False),
+            'message': result.get('message', '') or f"Successfully refreshed fixtures and projected points for {result.get('successful_players', 0)} players",
+            'fixtures_created': result.get('fixtures_created', 0),
+            'total_projections': result.get('total_projections', 0),
+            'successful_players': result.get('successful_players', 0),
+            'failed_players': result.get('failed_players', 0),
+            'total_players': result.get('total_players', 0),
+            'players_with_matches': players_with_matches,
             'last_update': settings.last_fixtures_update.strftime('%Y-%m-%d %H:%M')
-        })
-        
+        }
+        if not result.get('success'):
+            response['error'] = result.get('error', 'Projected points calculation failed')
+            return JsonResponse(response, status=500)
+        return JsonResponse(response)
+
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+        return JsonResponse({'success': False, 'error': f'Failed to refresh fixtures: {str(e)}'}, status=500)
 
 
 @csrf_exempt 
@@ -769,10 +778,10 @@ def calculate_projected_points(request):
     
     try:
         import asyncio
-        from MyApi.utils.projected_points_calculator import calculate_all_projected_points
+        from MyApi.utils.projected_points_calculator2 import calculate_and_store_projected_points
         
         # Always override existing projections to get fresh calculations
-        result = asyncio.run(calculate_all_projected_points(override_existing=True))
+        result = asyncio.run(calculate_and_store_projected_points())
         
         if result.get('success'):
             return JsonResponse({
