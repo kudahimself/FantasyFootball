@@ -1,17 +1,56 @@
 from MyApi.models import ProjectedPoints, PlayerFixture, Player
+import logging
+import asyncio
+import aiohttp
+from datetime import datetime
+from typing import Dict, Any
+
+
+
+logger = logging.getLogger(__name__)
 
 # Example ELO-based expected points calculation (replace with your actual formula)
-def calculate_expected_points(current_elo, competition, k=20):
-    # Example: k / (1 + 10**(league_rating / current_elo))
+def calculate_expected_points(current_elo: float, competition: str, k: int = 20) -> float:
+    """
+    Calculate expected points using EXACT same formula as ELO calculator.
+    
+    Args:
+        current_elo (float): Player's current ELO rating
+        competition (str): Competition name
+        k (int): K-factor (default 20)
+        
+    Returns:
+        float: Expected points
+    """
     league_rating = get_league_rating(competition)
-    return k / (1 + 10 ** (league_rating / current_elo)) if current_elo > 0 else 0.0
+    
+    # EXACT formula from ELO calculator: E_a = k/(1 + 10**(League_Rating/current_elo))
+    expected_points = round(k / (1 + 10**(league_rating / current_elo)), 2)
+    
+    return expected_points
 
-# Example: get league rating (replace with your actual logic)
-def get_league_rating(competition):
-    # Example: Premier League = 1500, Champions League = 1600, etc.
-    if competition == 'Champions League':
+def get_league_rating(competition: str) -> int:
+    """
+    Get league rating for competition - EXACT same as ELO calculator.
+    
+    Args:
+        competition (str): Competition name
+        
+    Returns:
+        int: League rating value
+    """
+    if competition == 'Champions League' or competition == 'Champions Lg':
         return 1600
-    return 1500
+    elif competition in ['Premier League', 'FA Cup', 'Europa League']:
+        return 1500
+    elif competition in ['Bundesliga', 'La Liga', 'Serie A']:
+        return 1300
+    elif competition in ['Ligue 1', 'Eredivisie']:
+        return 1250
+    elif competition in ['Championship', 'Primeira Liga']:
+        return 1000
+    else:
+        return 900
 
 # Example: apply opposition multiplier (replace with your actual logic)
 def apply_opposition_multiplier(expected_points, difficulty_rating, opposition_strength=1.0):
@@ -89,9 +128,6 @@ async def calculate_and_store_projected_points(override_existing=True):
             print(f"[ERROR] Projected points for {fixture.player_name} GW{fixture.gameweek}: {e}")
             skipped_fixtures += 1
     print(f"[DEBUG] Created/updated {projections_created} ProjectedPoints records. Skipped {skipped_fixtures} fixtures.")
-import asyncio
-import aiohttp
-from datetime import datetime
 
 async def refresh_fixtures_util(next_gameweeks=3) -> dict:
     """
