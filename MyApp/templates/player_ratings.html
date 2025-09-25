@@ -101,11 +101,16 @@
                 </td>
                 
                 <td>
-                    <span class="position-badge position-{{ player.position|lower }}">
-                        {% if player.position == 'Keeper' %}GK
-                        {% elif player.position == 'Defender' %}DEF
-                        {% elif player.position == 'Midfielder' %}MID
-                        {% elif player.position == 'Attacker' %}ATT
+                    <span class="badge 
+                        {% if player.position == 'Keeper' or player.position == 'GKP' %}bg-secondary text-dark{% endif %}
+                        {% if player.position == 'Defender' or player.position == 'DEF' %}bg-warning{% endif %}
+                        {% if player.position == 'Midfielder' or player.position == 'MID' %}bg-success{% endif %}
+                        {% if player.position == 'Attacker' or player.position == 'FWD' %}bg-primary{% endif %}
+                        ms-2">
+                        {% if player.position == 'Keeper' or player.position == 'GKP' %}GKP
+                        {% elif player.position == 'Defender' or player.position == 'DEF' %}DEF
+                        {% elif player.position == 'Midfielder' or player.position == 'MID' %}MID
+                        {% elif player.position == 'Attacker' or player.position == 'FWD' %}FWD
                         {% endif %}
                     </span>
                 </td>
