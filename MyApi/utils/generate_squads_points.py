@@ -84,11 +84,13 @@ class SquadSelector:
         return self.select_top_n_squads()
 
 
+
 class SquadSelectorPoints:
-    def __init__(self, formation='3-4-3'):
+    def __init__(self, formation='3-4-3', games_to_consider=3):
         self.current_week = SystemSettings.get_settings().current_gameweek
         self.formation = formation
         self.position_counts = self.get_position_counts(formation)
+        self.games_to_consider = games_to_consider
 
     def get_position_counts(self, formation):
         formation_map = {
@@ -103,8 +105,8 @@ class SquadSelectorPoints:
         qs = Player.objects.filter(position=position, week=self.current_week)
         player_data = []
         for p in qs:
-            # Get the sum of projected points for the next 3 fixtures
-            projections = ProjectedPoints.objects.filter(player_name=p.name).order_by('gameweek')[:3]
+            # Get the sum of projected points for the next N fixtures (N = self.games_to_consider)
+            projections = ProjectedPoints.objects.filter(player_name=p.name).order_by('gameweek')[:self.games_to_consider]
             projected_points = sum(float(proj.adjusted_expected_points) for proj in projections) if projections else 0.0
             player_data.append({
                 'Player': p.name,

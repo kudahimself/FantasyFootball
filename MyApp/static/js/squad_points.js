@@ -28,6 +28,15 @@ document.addEventListener('DOMContentLoaded', function() {
             generateAndDisplaySquads();
         });
     }
+
+    // Games-to-consider selector change listener
+    const gamesSelect = document.getElementById('games-to-consider-select');
+    if (gamesSelect) {
+        gamesSelect.addEventListener('change', () => {
+            console.log('[Squad Points] Games to consider changed →', gamesSelect.value);
+            generateAndDisplaySquads();
+        });
+    }
 });
 
 // Auto-generate squads on page load
@@ -37,9 +46,11 @@ window.onload = function() {
 
 function generateAndDisplaySquads() {
     const formationSelect = document.getElementById('formation-select');
+    const gamesSelect = document.getElementById('games-to-consider-select');
     const formation = formationSelect && formationSelect.value ? formationSelect.value : '3-4-3';
-    
-    console.log("[Squad Points] Generating projected points squads for formation:", formation);
+    const gamesToConsider = gamesSelect && gamesSelect.value ? parseInt(gamesSelect.value) : 3;
+
+    console.log("[Squad Points] Generating projected points squads for formation:", formation, "| Games to consider:", gamesToConsider);
 
     // Show loading state
     const btn = document.getElementById('btn-generate-squads');
@@ -47,7 +58,7 @@ function generateAndDisplaySquads() {
         btn.disabled = true;
         btn.textContent = 'Generating...';
     }
-    
+
     // Always use projected points endpoint
     fetch('/api/generate_squads_points/', {
         method: 'POST',
@@ -56,7 +67,8 @@ function generateAndDisplaySquads() {
         },
         body: JSON.stringify({
             formation: formation,
-            selection_mode: 'projected_points'
+            selection_mode: 'projected_points',
+            games_to_consider: gamesToConsider
         })
     })
     .then(response => {

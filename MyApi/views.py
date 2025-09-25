@@ -944,8 +944,9 @@ def generate_squads_points(request):
 
         data = json.loads(request.body) if request.body else {}
         formation_str = data.get('formation', '3-4-3')
+        games_to_consider = int(data.get('games_to_consider', 3))
 
-        selector = SquadSelectorPoints(formation=formation_str)
+        selector = SquadSelectorPoints(formation=formation_str, games_to_consider=games_to_consider)
         squads_pd = selector.select_top_n_squads(budget=82.5, top_n=4)
         squads = []
         for idx, squad_df in enumerate(squads_pd, 1):
@@ -962,7 +963,7 @@ def generate_squads_points(request):
                         'name': row['Player'],
                         'projected_points': round(float(row['ProjectedPoints']), 1),
                         'cost': float(row['Cost']),
-                        'team': row.get('Team', 'Unknown')
+                        'team': row.get('Team', 'Unknown') if hasattr(row, 'get') else row['Team'] if 'Team' in row else 'Unknown'
                     }
                     for _, row in squad_df.iterrows() if row['Position'] == 'Keeper'
                 ],
@@ -971,7 +972,7 @@ def generate_squads_points(request):
                         'name': row['Player'],
                         'projected_points': round(float(row['ProjectedPoints']), 1),
                         'cost': float(row['Cost']),
-                        'team': row.get('Team', 'Unknown')
+                        'team': row.get('Team', 'Unknown') if hasattr(row, 'get') else row['Team'] if 'Team' in row else 'Unknown'
                     }
                     for _, row in squad_df.iterrows() if row['Position'] == 'Defender'
                 ],
@@ -980,7 +981,7 @@ def generate_squads_points(request):
                         'name': row['Player'],
                         'projected_points': round(float(row['ProjectedPoints']), 1),
                         'cost': float(row['Cost']),
-                        'team': row.get('Team', 'Unknown')
+                        'team': row.get('Team', 'Unknown') if hasattr(row, 'get') else row['Team'] if 'Team' in row else 'Unknown'
                     }
                     for _, row in squad_df.iterrows() if row['Position'] == 'Midfielder'
                 ],
@@ -989,7 +990,7 @@ def generate_squads_points(request):
                         'name': row['Player'],
                         'projected_points': round(float(row['ProjectedPoints']), 1),
                         'cost': float(row['Cost']),
-                        'team': row.get('Team', 'Unknown')
+                        'team': row.get('Team', 'Unknown') if hasattr(row, 'get') else row['Team'] if 'Team' in row else 'Unknown'
                     }
                     for _, row in squad_df.iterrows() if row['Position'] == 'Attacker'
                 ]
