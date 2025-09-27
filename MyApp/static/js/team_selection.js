@@ -391,7 +391,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Load current squad from database (loads into localTeam)
 function loadCurrentSquadFromDatabase() {
     try {
-        window.localTeam = [];
+        window.localTeam = {};
         const currentSquadData = window.currentSquadData || {};
         window.currentSquad = currentSquadData;
         console.log('📊 Loading current squad from database:', currentSquadData);
@@ -406,6 +406,13 @@ function loadCurrentSquadFromDatabase() {
             'midfielders': 'MID',
             'forwards': 'FWD'
         };
+        // Build localTeam as an object with grouped arrays
+        window.localTeam = {
+            goalkeepers: [],
+            defenders: [],
+            midfielders: [],
+            forwards: []
+        };
         Object.keys(positionMapping).forEach(dbPosition => {
             const players = currentSquadData[dbPosition] || [];
             players.forEach(playerEntry => {
@@ -414,21 +421,22 @@ function loadCurrentSquadFromDatabase() {
                 const playerMatch = playerData.find(p => p.name === playerName);
                 if (playerMatch) {
                     const expectedPosition = positionMapping[dbPosition];
-                    if (playerMatch.position === expectedPosition) {
-                        window.localTeam.push(playerMatch);
-                    } else {
-                        const correctedPlayer = { ...playerMatch, position: expectedPosition };
-                        window.localTeam.push(correctedPlayer);
-                    }
-                    console.log(`✅ Added ${playerName} (${expectedPosition}) to local team`);
+                    const correctedPlayer = playerMatch.position === expectedPosition
+                        ? playerMatch
+                        : { ...playerMatch, position: expectedPosition };
+                    window.localTeam[dbPosition].push(correctedPlayer);
+                    console.log(`✅ Added ${playerName} (${expectedPosition}) to local team (${dbPosition})`);
                 } else {
                     console.warn(`⚠️ Player ${playerName} not found in available players data, skipping.`);
                 }
             });
         });
         // Remove any undefined/null entries just in case
-        window.localTeam = window.localTeam.filter(Boolean);
-        console.log(`📊 Loaded ${window.localTeam.length} players from current squad`);
+        Object.keys(window.localTeam).forEach(pos => {
+            window.localTeam[pos] = window.localTeam[pos].filter(Boolean);
+        });
+        const totalPlayers = Object.values(window.localTeam).reduce((acc, arr) => acc + arr.length, 0);
+        console.log(`📊 Loaded ${totalPlayers} players from current squad`);
         updateSquadBadges();
         displayCurrentSquad();
         console.log('✅ Current squad loaded and displayed.');

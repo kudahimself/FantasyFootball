@@ -1,6 +1,20 @@
 // Update Squad Badges
 function updateSquadBadges() {
-    const squad = window.localTeam || [];
+    // Support both array and grouped object formats for localTeam
+    let squad = [];
+    if (Array.isArray(window.localTeam)) {
+        squad = window.localTeam;
+    } else if (window.localTeam && typeof window.localTeam === 'object') {
+        squad = [].concat(
+            window.localTeam.goalkeepers || [],
+            window.localTeam.defenders || [],
+            window.localTeam.midfielders || [],
+            window.localTeam.forwards || []
+        );
+    }
+    console.log('updateSquadBadges: squad', squad);
+    console.log('updateSquadBadges: localTeam', window.localTeam);
+
     const avgEloElem = document.getElementById('squad-avg-elo');
     const projElem = document.getElementById('squad-projected-points');
     const costElem = document.getElementById('squad-total-cost');
@@ -24,8 +38,13 @@ function updateSquadBadges() {
 
 
 
-// Add player function
+// Add player function for grouped localTeam object
 function addPlayer(playerId, playerName) {
+    if (!window.editMode) {
+        alert('Edit mode is not enabled. Please toggle edit mode to make changes.');
+        return;
+    }
+
     console.log('➕ Adding player:', playerName, 'ID:', playerId);
     console.log('📊 dynamicAllPlayers array length:', dynamicAllPlayers.length);
 
@@ -40,75 +59,63 @@ function addPlayer(playerId, playerName) {
 
     console.log('✅ Found player:', player);
 
+    // Determine position group
+    let posGroup = '';
+    switch (player.position) {
+        case 'GKP': posGroup = 'goalkeepers'; break;
+        case 'DEF': posGroup = 'defenders'; break;
+        case 'MID': posGroup = 'midfielders'; break;
+        case 'FWD': posGroup = 'forwards'; break;
+        default:
+            showStatusMessage('Unknown player position: ' + player.position, 'error');
+            return;
+    }
+
     // Prevent adding the same player twice (by id or name)
-    if (window.localTeam.some(p => p.id == player.id || p.name === player.name)) {
+    if (window.localTeam[posGroup].some(p => p.id == player.id || p.name === player.name)) {
         showStatusMessage(`${playerName} is already in your team!`, 'error');
         return;
     }
 
-    // Check team size limit (11 players)
-    if (window.localTeam.length >= 11) {
+    // Check total team size limit (11 players)
+    const totalPlayers = ['goalkeepers', 'defenders', 'midfielders', 'forwards']
+        .reduce((sum, key) => sum + (window.localTeam[key]?.length || 0), 0);
+    if (totalPlayers >= 11) {
         showStatusMessage('Your team is full! (11 players maximum)', 'error');
         return;
     }
 
-    // Add player to local team
-    window.localTeam.push(player);
+    // Add player to correct position group
+    window.localTeam[posGroup].push(player);
     updateSquadBadges();
-    updateSquadDisplay();
-    console.log(`✅ Added ${playerName} to team. Team size: ${window.localTeam.length}`);
+    updateSquadDisplay(window.localTeam);
+    console.log(`✅ Added ${playerName} to team (${posGroup}). Team size: ${totalPlayers + 1}`);
     showStatusMessage(`Added ${playerName} to your team.`, 'success');
 }
 
 function removePlayer(playerId, playerName) {
     if (!window.localTeam) return;
-    const index = window.localTeam.findIndex(p => p.id == playerId || p.name === playerName);
-    if (index > -1) {
-        window.localTeam.splice(index, 1);
-        updateSquadBadges();
-        updateSquadDisplay();
-        console.log(`🗑️ Removed ${playerName} from local team. Team size: ${window.localTeam.length}`);
+
+    // If localTeam is an object with position arrays
+    let removed = null;
+    let changed = false;
+    for (const pos of ['goalkeepers', 'defenders', 'midfielders', 'forwards']) {
+        if (Array.isArray(window.localTeam[pos])) {
+            const idx = window.localTeam[pos].findIndex(
+                p => p.id == playerId || p.name === playerName
+            );
+            if (idx > -1) {
+                removed = window.localTeam[pos].splice(idx, 1)[0];
+                changed = true;
+                console.log(`🗑️ Removed ${playerName} from ${pos}.`);
+                break;
+            }
+        }
     }
-}
-// Remove a player from the squad
-function removePlayerFromSquad(position, playerName) {
-    console.log(`Removing ${playerName} from ${position} (local-only, mirror addPlayer)...`);
-
-    try {
-        // Ensure localTeam exists
-        if (!window.localTeam || !Array.isArray(window.localTeam)) {
-            window.localTeam = [];
-        }
-
-        // Find index by name (calls to this function pass name)
-        const idx = window.localTeam.findIndex(p => p.name === playerName || String(p.id) === String(playerName));
-        if (idx === -1) {
-            console.warn('Player not found in localTeam:', playerName);
-            alert(`${playerName} was not in your local team.`);
-            return;
-        }
-
-        const removed = window.localTeam.splice(idx, 1)[0];
-
-        // Use the same render flow as addPlayer
-        if (typeof updateSquadBadges === 'function') updateSquadBadges();
-        if (typeof updateSquadDisplay === 'function') updateSquadDisplay();
-        // Re-render dynamic players list if present
-        if (typeof renderPlayers === 'function') renderPlayers();
-        if (typeof refreshPlayerPane === 'function') refreshPlayerPane();
-
-        // Focus search input and scroll to player list for consistent UX
-        const searchInput = document.getElementById('player-search');
-        if (searchInput) searchInput.focus();
-        const playersList = document.getElementById('players-list');
-        if (playersList) playersList.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-        // Show the same alert style as addPlayer
-        alert(`✅ Removed ${removed.name} from your team!`);
-        console.log(`✅ Locally removed ${removed.name}. localTeam size: ${window.localTeam.length}`);
-    } catch (err) {
-        console.error('Error in local removePlayerFromSquad:', err);
-        showStatusMessage('Error removing player locally. See console for details.', 'error');
+    if (changed) {
+        updateSquadBadges();
+        updateSquadDisplay(window.localTeam);
+        console.log(`🗑️ Removed ${playerName} from local team.`);
     }
 }
 
@@ -118,15 +125,21 @@ function applyChangesToBackend() {
         alert('No players in your squad to save!');
         return;
     }
-    // Send the flat localTeam array; backend will group it
-    const squadToSend = window.localTeam.map(player => {
-        const playerObj = {};
-        ['id','name','position','team','cost','elo','elo','projected_points'].forEach(k => {
-            if (player[k] !== undefined) playerObj[k] = player[k];
+    // Flatten grouped localTeam object into a single array
+    const squadToSend = []
+        .concat(
+            window.localTeam.goalkeepers || [],
+            window.localTeam.defenders || [],
+            window.localTeam.midfielders || [],
+            window.localTeam.forwards || []
+        )
+        .map(player => {
+            const playerObj = {};
+            ['id','name','position','team','cost','elo','projected_points'].forEach(k => {
+                if (player[k] !== undefined) playerObj[k] = player[k];
+            });
+            return playerObj;
         });
-        if (playerObj.elo && !playerObj.elo) playerObj.elo = playerObj.elo;
-        return playerObj;
-    });
     const btn = document.getElementById('apply-changes-btn');
     if (btn) btn.disabled = true;
     fetch('/api/update_current_squad/', {

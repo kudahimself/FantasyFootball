@@ -3,9 +3,15 @@ function discardLocalChanges() {
     if (window.currentSquadData && window.serverPlayers) {
         // Deep copy to avoid reference issues
         window.currentSquad = JSON.parse(JSON.stringify(window.currentSquadData));
+        window.editMode = false;
 
-        // Rebuild window.localTeam from the reverted squad
-        window.localTeam = [];
+        // Rebuild window.localTeam as an object with grouped arrays
+        window.localTeam = {
+            goalkeepers: [],
+            defenders: [],
+            midfielders: [],
+            forwards: []
+        };
         const positionMapping = {
             'goalkeepers': 'GKP',
             'defenders': 'DEF',
@@ -20,17 +26,13 @@ function discardLocalChanges() {
                 const playerMatch = window.serverPlayers.find(p => p.name === playerName);
                 if (playerMatch) {
                     const expectedPosition = positionMapping[dbPosition];
-                    if (playerMatch.position === expectedPosition) {
-                        window.localTeam.push(playerMatch);
-                    } else {
-                        const correctedPlayer = { ...playerMatch, position: expectedPosition };
-                        window.localTeam.push(correctedPlayer);
-                    }
+                    const correctedPlayer = playerMatch.position === expectedPosition
+                        ? playerMatch
+                        : { ...playerMatch, position: expectedPosition };
+                    window.localTeam[dbPosition].push(correctedPlayer);
                 }
             });
         });
-        // Remove any undefined/null entries just in case
-        window.localTeam = window.localTeam.filter(Boolean);
 
         // Update all squad-related UI
         if (typeof updateSquadBadges === 'function') updateSquadBadges();
@@ -47,115 +49,11 @@ function discardLocalChanges() {
     }
 }
 // Update squad display function (uses localTeam)
-function updateSquadDisplay() {
-    const squadContent = document.getElementById('squad-content');
-    if (!squadContent) return;
-    const team = window.localTeam || [];
-
-    // Define the order and display names for positions
-    const positionOrder = [
-        { key: 'GKP', label: 'GKP' },
-        { key: 'DEF', label: 'DEF' },
-        { key: 'MID', label: 'MID' },
-        { key: 'FWD', label: 'FWD' }
-    ];
-
-    // Group players by position
-    const grouped = { GKP: [], DEF: [], MID: [], FWD: [] };
-    team.forEach(player => {
-        if (grouped[player.position]) {
-            grouped[player.position].push(player);
-        }
-    });
-
-    squadContent.innerHTML = '';
-
-    positionOrder.forEach(pos => {
-        const players = grouped[pos.key] || [];
-        // Add heading for the position
-        const heading = document.createElement('div');
-        heading.textContent = pos.label;
-        heading.className = 'position-header';
-        squadContent.appendChild(heading);
-
-        if (players.length === 0) {
-            const empty = document.createElement('div');
-            empty.textContent = `No ${pos.label}`;
-            empty.style.color = '#888';
-            empty.style.padding = '8px 20px';
-            squadContent.appendChild(empty);
-        } else {
-            players.forEach(player => {
-                const card = document.createElement('div');
-                card.className = 'player-card';
-
-                card.setAttribute('data-name', (player.name || '').toLowerCase());
-                card.setAttribute('data-team', (player.team || '').toLowerCase());
-                card.setAttribute('data-position', pos.label);
-
-                // .player-info
-                const info = document.createElement('div');
-                info.className = 'player-info';
-
-                // .player-name
-                const name = document.createElement('div');
-                name.className = 'player-name';
-                name.textContent = player.name + ' ';
-                // Add badge for position
-                const badge = document.createElement('span');
-                badge.className = 'badge ms-2';
-                if (pos.label === 'GKP') badge.classList.add('bg-secondary', 'text-dark');
-                if (pos.label === 'DEF') badge.classList.add('bg-warning');
-                if (pos.label === 'MID') badge.classList.add('bg-success');
-                if (pos.label === 'FWD') badge.classList.add('bg-primary');
-                badge.textContent = pos.label;
-                name.appendChild(badge);
-                info.appendChild(name);
-
-                // .player-team
-                const teamDiv = document.createElement('div');
-                teamDiv.className = 'player-team';
-                teamDiv.textContent = (player.team || '');
-                info.appendChild(teamDiv);
-
-                card.appendChild(info);
-
-                // .player-stats
-                const stats = document.createElement('div');
-                stats.className = 'player-stats-team-selection';
-
-                // .player-price
-                const price = document.createElement('div');
-                price.className = 'player-price';
-                price.textContent = player.cost !== undefined ? `£${player.cost}m` : '';
-                stats.appendChild(price);
-
-                // .player-points (ELO)
-                const points = document.createElement('div');
-                points.className = 'player-points';
-                const elo = player.elo !== undefined ? player.elo : (player.elo !== undefined ? player.elo : 0);
-                points.textContent = `📊 ${Math.round(elo * 10) / 10}`;
-                stats.appendChild(points);
-
-                // .player-projected (projected points)
-                const proj = document.createElement('div');
-                proj.className = 'player-projected';
-                proj.textContent = `⭐ ${player.projected_points || 0}pts`;
-                stats.appendChild(proj);
-
-                card.appendChild(stats);
-
-                // Remove button (styled like remove-btn)
-                const removeButton = document.createElement('button');
-                removeButton.textContent = '×';
-                removeButton.className = 'remove-btn';
-                removeButton.onclick = () => removePlayer(player.id, player.name);
-                card.appendChild(removeButton);
-
-                squadContent.appendChild(card);
-            });
-        }
-    });
+function updateSquadDisplay(squadData) {
+    const squadList = document.getElementById('squad-list');
+    squadList.innerHTML = '<div style="color:#888;text-align:center;width:100%;">Loading squad...</div>';
+    console.log('Loaded current squad from API:', squadData);
+    renderSquad(squadData);
 }
 
 // Render players dynamically
@@ -215,113 +113,109 @@ function renderPlayers() {
  * Renders the squad in formation layout.
  */
 function displayCurrentSquad() {
-    const squadContent = document.getElementById("squad-content");
-    const team = window.localTeam || [];
-    if (!squadContent) return;
+    const squadList = document.getElementById('squad-list');
+    squadList.innerHTML = '<div style="color:#888;text-align:center;width:100%;">Loading squad...</div>';
+    fetch('/api/current_squad/')
+        .then(response => response.json())
+        .then(data => {
+            if (!data || !data.current_squad || Object.keys(data.current_squad).length === 0) {
+                squadList.innerHTML = '<div style="color:#888;text-align:center;width:100%;">No squad data available.</div>';
+                return;
+            }
+            window.localTeam = data.current_squad;
+            console.log('Loaded current squad from API:', window.localTeam);
+            renderSquad(window.localTeam);
+        })
+        .catch(() => {
+            squadList.innerHTML = '<div style="color:#888;text-align:center;width:100%;">No squad data available.</div>';
+        });
+}
 
-    // Define the order and display names for positions
-    const positionOrder = [
-        { key: 'GKP', label: 'GKP' },
-        { key: 'DEF', label: 'DEF' },
-        { key: 'MID', label: 'MID' },
-        { key: 'FWD', label: 'FWD' }
-    ];
 
-    // Group players by position
-    const grouped = { GKP: [], DEF: [], MID: [], FWD: [] };
-    team.forEach(player => {
-        if (grouped[player.position]) {
-            grouped[player.position].push(player);
+function renderSquad(squadData) {
+    const squadList = document.getElementById('squad-list');
+    squadList.innerHTML = '';
+    console.log('Loading Squad');
+    if (!squadData || Object.keys(squadData).length === 0) {
+        squadList.innerHTML = '<div style="color:#888;text-align:center;width:100%;">No squad data lol available.</div>';
+        return;
+    }
+    if (window.editMode) {
+        // Edit the existing header div with id="team-selection-header"
+        const editHeaderDiv = document.getElementById('team-selection-header');
+        if (editHeaderDiv) {
+            editHeaderDiv.textContent = 'Edit Team Selection';
+            editHeaderDiv.className = 'edit-team-header';
         }
+    } else {
+        const headerDiv = document.getElementById('team-selection-header');
+        if (headerDiv) {
+            headerDiv.textContent = 'Team Selection';
+            headerDiv.className = '';
+        }
+    }
+
+    // Calculate squad attributes
+    let totalPoints = 0, totalCost = 0, totalElo = 0, playerCount = 0, subsCount = 0;
+    ['goalkeepers','defenders','midfielders','forwards'].forEach(pos => {
+        const players = squadData[pos] || [];
+        players.forEach((p, idx) => {
+            // Assume first 11 are starters, rest are subs
+            if (playerCount >= 11) subsCount++;
+            totalPoints += Number(p.projected_points) || 0;
+            totalCost += Number(p.cost) || 0;
+            totalElo += Number(p.elo !== undefined ? p.elo : (p.elo !== undefined ? p.elo : 0)) || 0;
+            playerCount++;
+        });
     });
 
-    squadContent.innerHTML = '';
-
+    const positionOrder = [
+        { key: 'goalkeepers', label: 'GKP' },
+        { key: 'defenders', label: 'DEF' },
+        { key: 'midfielders', label: 'MID' },
+        { key: 'forwards', label: 'FWD' }
+    ];
     positionOrder.forEach(pos => {
-        const players = grouped[pos.key] || [];
-        // Add heading for the position
-        const heading = document.createElement('div');
-        heading.textContent = pos.label;
-        heading.className = 'position-header';
-        squadContent.appendChild(heading);
-
-        if (players.length === 0) {
-            const empty = document.createElement('div');
-            empty.textContent = `No ${pos.label}`;
-            empty.style.color = '#888';
-            empty.style.padding = '8px 20px';
-            squadContent.appendChild(empty);
-        } else {
-            players.forEach(player => {
-                // Use the same HTML structure as the player selection pane
+        const players = squadData[pos.key] || [];
+        if (players.length > 0) {
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'squad-row';
+            players.forEach(playerObj => {
                 const card = document.createElement('div');
-                card.className = 'player-card';
-                card.setAttribute('data-name', (player.name || '').toLowerCase());
-                card.setAttribute('data-team', (player.team || '').toLowerCase());
-                card.setAttribute('data-position', pos.label);
-
-                // .player-info
-                const info = document.createElement('div');
-                info.className = 'player-info';
-
-                // .player-name
-                const name = document.createElement('div');
-                name.className = 'player-name';
-                name.textContent = player.name + ' ';
-                // Add badge for position
-                const badge = document.createElement('span');
-                badge.className = 'badge ms-2';
-                if (pos.label === 'GKP') badge.classList.add('bg-secondary', 'text-dark');
-                if (pos.label === 'DEF') badge.classList.add('bg-warning');
-                if (pos.label === 'MID') badge.classList.add('bg-success');
-                if (pos.label === 'FWD') badge.classList.add('bg-primary');
-                badge.textContent = pos.label;
-                name.appendChild(badge);
-                info.appendChild(name);
-
-                // .player-team
-                const teamDiv = document.createElement('div');
-                teamDiv.className = 'player-team';
-                teamDiv.textContent = (player.team || '');
-                info.appendChild(teamDiv);
-
-                card.appendChild(info);
-
-                // .player-stats
-                const stats = document.createElement('div');
-                stats.className = 'player-stats-team-selection';
-
-                // .player-price
-                const price = document.createElement('div');
-                price.className = 'player-price';
-                price.textContent = player.cost !== undefined ? `£${player.cost}m` : '';
-                stats.appendChild(price);
-
-                // .player-points (ELO)
-                const points = document.createElement('div');
-                points.className = 'player-points';
-                const elo = player.elo !== undefined ? player.elo : (player.elo !== undefined ? player.elo : 0);
-                points.textContent = `📊 ${Math.round(elo * 10) / 10}`;
-                stats.appendChild(points);
-
-                // .player-projected (projected points)
-                const proj = document.createElement('div');
-                proj.className = 'player-projected';
-                proj.textContent = `⭐ ${player.projected_points || 0}pts`;
-                stats.appendChild(proj);
-
-                card.appendChild(stats);
-
-                // Remove button (styled like remove-btn)
-                const removeButton = document.createElement('button');
-                removeButton.textContent = '×';
-                removeButton.className = 'remove-btn';
-                removeButton.onclick = () => removePlayer(player.id, player.name);
-                card.appendChild(removeButton);
-
-                squadContent.appendChild(card);
+                // Show second name if available, otherwise first
+                let displayName = '';
+                if (playerObj.name) {
+                    const nameParts = playerObj.name.trim().split(' ');
+                    displayName = nameParts.length > 1 ? nameParts[1] : nameParts[0];
+                }
+                card.innerHTML = `
+                    <div class="player-svg-container" style="position:relative; cursor:pointer;"
+                         onclick="removePlayer('${playerObj.id || playerObj.name}', '${playerObj.name}'); return false;"
+                         title="Remove Player">
+                        <img src="/static/img/player.png" width="90" height="90" alt="Player Icon" />
+                        <span style="position:absolute;top:4px;right:4px;font-size:18px;color:#c00;">
+                            &times;
+                        </span>
+                    </div>
+                    <div class="player-svg-name">${displayName}</div>
+                `;
+                rowDiv.appendChild(card);
             });
+            squadList.appendChild(rowDiv);
         }
     });
 }
 
+toggleEditMode = function() {
+    window.editMode = !window.editMode;
+    const makeChangesBtn = document.getElementById('make-changes-btn');
+    if (makeChangesBtn) {
+        if (window.editMode) {
+            makeChangesBtn.classList.add('active-make-changes-btn');
+        } else {
+            makeChangesBtn.classList.remove('active-make-changes-btn');
+        }
+    }
+    updateSquadDisplay(window.localTeam);
+    if (typeof updateSquadBadges === 'function') updateSquadBadges();
+}

@@ -1,3 +1,35 @@
+/* Make Changes button styling */
+#make-changes-btn {
+    align-self: flex-start;
+    margin-right: auto;
+    margin-left: 0;
+    padding: 10px 22px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(30,58,138,0.08);
+    transition: background 0.2s, box-shadow 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+#make-changes-btn .edit-mode-icon {
+    margin-right: 6px;
+    font-size: 1.1em;
+}
+#make-changes-btn:hover {
+    background: #495057;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(30,58,138,0.16);
+}
+/* Add pressed/active state */
+#make-changes-btn.active,
+#make-changes-btn.active-make-changes-btn {
+    background: #28a745;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(40,167,69,0.18);
+}
+
 .font-weight-bold {
     color: #111 !important;
 }
@@ -16,11 +48,16 @@
 .team-selection-container {
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     gap: 0;
     margin-bottom: 30px;
     width: 100%;
-    min-height: 700px;
-    max-height: 1000px;
+    min-width: 0;
+    max-width: 100vw;
+    height: 90vh;
+    min-height: 0;
+    max-height: none;
+    box-sizing: border-box;
     padding: 5px; /* Add 5px padding around the container */
     margin-top: 5px; /* Add space above the team selection pane for nav separation */
 }
@@ -32,7 +69,8 @@
     background: #0E223B !important;
     border-right: 1px solid #dee2e6;
     overflow-y: visible;
-    min-height: 700px;
+    min-height: 300px;
+    max-height: 100%;
     box-sizing: border-box;
     flex-shrink: 0;
     padding: 10px;
@@ -103,7 +141,8 @@
 .players-list {
     background: white;
     max-height: calc(100vh - 250px);
-    min-height: 600px;
+    min-height: 200px;
+    max-height: 65%;
     overflow-y: auto;
 }
 
@@ -132,7 +171,8 @@
     display: flex;
     align-items: center;
     padding: 12px 20px;
-    border-bottom: 1px solid #f1f1f1;
+    /* border-bottom: 1px solid #f1f1f1; */
+    border: none;
     cursor: pointer;
     transition: background-color 0.2s;
     max-height: 65px;
@@ -300,9 +340,9 @@
     margin: 0 !important; 
 }
 
-#squad-content { 
-    padding: 0 !important; 
-    margin: 0 !important; 
+#squad-content {
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
 #formation {
@@ -407,3 +447,111 @@ h1, h2 { margin-left: 10px; }
     gap: 10px;
     margin-right: 10px;
 }
+
+
+
+.squad-list {
+    width: 100%;
+    min-width: 800px;
+    max-width: 900px;
+    min-height: 500px;
+    position: relative;
+    background: url('/static/img/football_pitch.png') center center/contain no-repeat;
+    border-radius: 0;
+    border: none;
+    overflow: hidden;
+    padding: 24px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    justify-content: center;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 10%;
+
+}
+
+.squad-row {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    gap: min(140px, 8vw);
+    margin-bottom: 32px;
+    border: none;
+}
+
+/* Player SVG Card Styles */
+.player-svg-card {
+    background: rgba(255,255,255,0.92);
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(30,58,138,0.10);
+        padding: 18px 14px 20px 14px;
+        min-width: 130px;
+        max-width: 150px;
+        width: 140px;
+        min-height: 170px;
+        max-height: 190px;
+        height: 180px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    position: relative;
+    margin-bottom: 0;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.player-svg-card:hover {
+    transform: translateY(-4px) scale(1.04);
+    box-shadow: 0 6px 18px rgba(30,58,138,0.16);
+}
+.player-svg-container {
+    width: 54px;
+    height: 54px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.player-svg-name {
+    font-weight: 500;
+    font-size: 0.78rem;
+    color: #111;
+    background: #fff;
+    border-radius: 6px;
+    padding: 2px 8px;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.player-svg-meta {
+    font-size: 0.89rem;
+    color: #444;
+    margin-bottom: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90px;
+}
+
+@media (max-width: 700px) {
+    .squad-section {
+        padding: 18px 4px;
+    }
+    .squad-list {
+        gap: 10px;
+    }
+    .player-card {
+        min-width: 120px;
+        max-width: 140px;
+        padding: 10px 8px;
+    }
+}
+
