@@ -100,6 +100,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+
     // Projected Points functionality
     const loadProjectedBtn = document.getElementById('load-projected-btn');
     if (loadProjectedBtn) {
@@ -109,57 +110,60 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+let teamIdToName = null;
+
 function loadProjectedPoints() {
     const loadingDiv = document.getElementById('projected-loading');
     const contentDiv = document.getElementById('projected-content');
     const btn = document.getElementById('load-projected-btn');
-    
     // Get player name from the page
     const playerNameElement = document.querySelector('h1.h2');
     if (!playerNameElement) {
         console.error('Could not find player name element');
         return;
     }
-    
     // Extract player name (remove team badge if present)
     const playerName = playerNameElement.textContent.trim().split('\n')[0].trim();
-    
     // Show loading state
     loadingDiv.style.display = 'block';
     contentDiv.innerHTML = '';
     btn.disabled = true;
-    
-    fetch(`/api/projected_points/${encodeURIComponent(playerName)}/`)
-        .then(response => response.json())
-        .then(data => {
-            loadingDiv.style.display = 'none';
-            btn.disabled = false;
-            
-            if (data.success) {
-                displayProjectedPoints(data);
-            } else {
+
+    // Fetch team map if not already loaded
+    const fetchTeamMap = teamIdToName ? Promise.resolve(teamIdToName) : fetch('/api/team_map/').then(r => r.json());
+    fetchTeamMap.then(map => {
+        teamIdToName = map;
+        fetch(`/api/projected_points/${encodeURIComponent(playerName)}/`)
+            .then(response => response.json())
+            .then(data => {
+                loadingDiv.style.display = 'none';
+                btn.disabled = false;
+                if (data.success) {
+                    displayProjectedPoints(data, teamIdToName);
+                } else {
+                    contentDiv.innerHTML = `
+                        <div class="alert alert-warning">
+                            <strong>No projected points available.</strong><br>
+                            ${data.error || 'Click "Calculate Projected Points" in Data Manager to generate projections.'}
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading projected points:', error);
+                loadingDiv.style.display = 'none';
+                btn.disabled = false;
                 contentDiv.innerHTML = `
-                    <div class="alert alert-warning">
-                        <strong>No projected points available.</strong><br>
-                        ${data.error || 'Click "Calculate Projected Points" in Data Manager to generate projections.'}
+                    <div class="alert alert-danger">
+                        <strong>Error loading projected points.</strong><br>
+                        Please try again later.
                     </div>
                 `;
-            }
-        })
-        .catch(error => {
-            console.error('Error loading projected points:', error);
-            loadingDiv.style.display = 'none';
-            btn.disabled = false;
-            contentDiv.innerHTML = `
-                <div class="alert alert-danger">
-                    <strong>Error loading projected points.</strong><br>
-                    Please try again later.
-                </div>
-            `;
-        });
+            });
+    });
 }
 
-function displayProjectedPoints(data) {
+function displayProjectedPoints(data, teamIdToName) {
     const contentDiv = document.getElementById('projected-content');
     
     if (data.games_projected === 0) {
@@ -225,10 +229,14 @@ function displayProjectedPoints(data) {
         // Round points to 1 decimal place
         const expectedPoints = Number(projection.expected_points).toFixed(1);
         const adjustedPoints = Number(projection.adjusted_points).toFixed(1);
+        let opponentName = projection.opponent;
+        if (teamIdToName && teamIdToName[opponentName]) {
+            opponentName = teamIdToName[opponentName];
+        }
         html += `
             <tr>
                 <td><strong>GW${projection.gameweek}</strong></td>
-                <td>${projection.opponent}</td>
+                <td>${opponentName}</td>
                 <td><i class="fas ${venueIcon}"></i> ${venue}</td>
                 <td><span class="badge ${difficultyColor}">${projection.difficulty}</span></td>
                 <td>${expectedPoints}</td>

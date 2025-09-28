@@ -6,6 +6,14 @@ from MyApi.utils.generate_squads import SquadSelector
 import json
 
 # Create your views here.
+def get_team_map(request):
+    """
+    API endpoint to return mapping of FPL team IDs to team names.
+    """
+    from MyApi.models import Team
+    teams = Team.objects.all()
+    team_map = {team.fpl_team_id: team.name for team in teams}
+    return JsonResponse(team_map)
 
 def get_squads(request):
     """

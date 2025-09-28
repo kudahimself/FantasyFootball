@@ -138,8 +138,8 @@
     background: #4a0e4e;
 }
 
-.players-list {
-    background: white;
+ .players-list {
+    background: #0E223B !important;
     max-height: calc(100vh - 250px);
     min-height: 200px;
     max-height: 65%;
