@@ -280,7 +280,7 @@ function applySubstitutionsSequentially(substitutions, index) {
         // All substitutions completed
         showStatusMessage(`Successfully applied all ${substitutions.length} substitutions!`, 'success');
         // Refresh the squad and recommendations
-        loadCurrentSquad();
+        loadCurrentSquadFromDatabase();
         setTimeout(() => {
             loadSubstituteRecommendations();
         }, 1500);
@@ -385,7 +385,7 @@ function makeSubstitution(currentPlayerName, substitutePlayerName, position) {
         if (data.success || !data.error) {
             showStatusMessage(`Successfully replaced ${currentPlayerName} with ${substitutePlayerName}!`, 'success');
             // Refresh the squad and recommendations
-            loadCurrentSquad();
+            loadCurrentSquadFromDatabase();
             setTimeout(() => {
                 loadSubstituteRecommendations();
             }, 1000);

@@ -54,6 +54,15 @@ function updateSquadDisplay(squadData) {
     squadList.innerHTML = '<div style="color:#888;text-align:center;width:100%;">Loading squad...</div>';
     console.log('Loaded current squad from API:', squadData);
     renderSquad(squadData);
+        // Add editable-squad-row class after squad rows are rendered
+    setTimeout(() => {
+        const squadRows = document.querySelectorAll('.squad-row');
+        if (window.editMode) {
+            squadRows.forEach(row => row.classList.add('editable-squad-row'));
+        } else {
+            squadRows.forEach(row => row.classList.remove('editable-squad-row'));
+        }
+    }, 0);
 }
 
 // Render players dynamically
@@ -144,13 +153,13 @@ function renderSquad(squadData) {
         // Edit the existing header div with id="team-selection-header"
         const editHeaderDiv = document.getElementById('team-selection-header');
         if (editHeaderDiv) {
-            editHeaderDiv.textContent = 'Edit Team Selection';
+            editHeaderDiv.textContent = 'Team Selection';
             editHeaderDiv.className = 'edit-team-header';
         }
     } else {
         const headerDiv = document.getElementById('team-selection-header');
         if (headerDiv) {
-            headerDiv.textContent = 'Team Selection';
+            headerDiv.textContent = 'Fantasy 11';
             headerDiv.className = '';
         }
     }

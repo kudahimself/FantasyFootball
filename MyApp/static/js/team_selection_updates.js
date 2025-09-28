@@ -94,7 +94,9 @@ function addPlayer(playerId, playerName) {
 }
 
 function removePlayer(playerId, playerName) {
-    if (!window.localTeam) return;
+    if (!window.editMode) {
+        return;
+    }
 
     // If localTeam is an object with position arrays
     let removed = null;

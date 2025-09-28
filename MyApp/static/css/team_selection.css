@@ -480,6 +480,20 @@ h1, h2 { margin-left: 10px; }
     border: none;
 }
 
+.editable-squad-row {
+    position: relative;
+}
+.editable-squad-row::after {
+    content: "";
+    position: absolute;
+    left: 15%;
+    width: 70%;
+    bottom: 0;
+    border-bottom: 2px dashed #dfd6df;
+    height: 0;
+    pointer-events: none;
+}
+
 /* Player SVG Card Styles */
 .player-svg-card {
     background: rgba(255,255,255,0.92);
