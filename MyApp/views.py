@@ -74,12 +74,12 @@ def team_selection(request):
     except Exception as e:
         return render(request, 'team_selection.html', {'players': [], 'error': f'Error loading player data: {str(e)}'})
 
-def squads(request):
+def squad_elo(request):
     squad_numbers = range(1, 5) 
     context = {
         'squad_numbers': squad_numbers,
     }
-    return render(request, 'squads.html', context)
+    return render(request, 'squad_elo.html', context)
 
 def player_ratings(request):
     """

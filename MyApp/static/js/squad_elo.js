@@ -37,7 +37,7 @@ function generateAndDisplaySquads() {
         btn.disabled = true;
         btn.textContent = 'Generating...';
     }
-    fetch(`/api/squads/?formation=${encodeURIComponent(formation)}&_ts=${Date.now()}`)
+    fetch(`/api/generate_squads_elo/?formation=${encodeURIComponent(formation)}&_ts=${Date.now()}`)
         .then(response => response.json())
         .then(data => {
             if (btn) {

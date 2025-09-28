@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Squads{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/squad.css' %}">
+<link rel="stylesheet" href="{% static 'css/squad_content.css' %}">
+<link rel="stylesheet" href="{% static 'css/squad_navigation.css' %}">
+
+<!-- Sub-navigation: Generate + Squad selectors + Toggle -->
+<nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom mb-3 squad-nav">
+    <div class="btn-toolbar w-100" role="toolbar" aria-label="Squad toolbar">
+        <div class="btn-group" role="group" aria-label="Generate and select squad">
+            <button id="btn-generate-squads" type="button" class="btn btn-success">Generate Squads</button>
+               <div class="input-group input-group-sm ml-2" style="width: auto;">
+                   <div class="input-group-prepend">
+                       <span class="input-group-text">Formation</span>
+                   </div>
+                   <select id="formation-select" class="form-control">
+                       <option value="3-4-3" selected>3-4-3</option>
+                       <option value="3-5-2">3-5-2</option>
+                       <option value="4-4-2">4-4-2</option>
+                       <option value="4-3-3">4-3-3</option>
+                   </select>
+               </div>
+            <button id="btn-squad-1" type="button" class="btn btn-success" onclick="showSquad(1)">Squad 1</button>
+            <button id="btn-squad-2" type="button" class="btn btn-success" onclick="showSquad(2)">Squad 2</button>
+            <button id="btn-squad-3" type="button" class="btn btn-success" onclick="showSquad(3)">Squad 3</button>
+            <button id="btn-squad-4" type="button" class="btn btn-success" onclick="showSquad(4)">Squad 4</button>
+        </div>
+        
+        <!-- Selection Mode Toggle -->
+        <div class="d-flex align-items-center ml-3">
+            <span class="mr-2 font-weight-bold text-success">ELO</span>
+            <label class="switch mb-0">
+                <input type="checkbox" id="selection-mode-toggle">
+                <span class="slider round"></span>
+            </label>
+            <span class="ml-2 font-weight-bold">Projected Points</span>
+        </div>
+    </div>
+</nav>
+
+
+<div id="squad">
+    <h2>Squad <span id="current-squad-number">1</span></h2>
+    <div id="squad-content"></div>
+</div>
+
+<script src="{% static 'js/squad_elo.js' %}"></script>
+
+{% endblock %}

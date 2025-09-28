@@ -4,167 +4,11 @@
 {% block title %}Squad Builder - Projected Points{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/squads.css' %}">
+<link rel="stylesheet" href="{% static 'css/squad.css' %}">
+<link rel="stylesheet" href="{% static 'css/squad_navigation.css' %}">
+<link rel="stylesheet" href="{% static 'css/squad_content.css' %}">
 <link rel="stylesheet" href="{% static 'css/squad_points.css' %}">
 
-<style>
-    /* Squad Points page: remove horizontal padding so formation spans full screen width */
-    .container-fluid { padding-left: 0 !important; padding-right: 0 !important; }
-    #squad { padding: 0 !important; margin: 0 !important; }
-    #squad-content { padding: 0 !important; margin: 0 !important; }
-    #formation {
-        padding: 0 !important;       /* remove inner padding so rows use full width */
-        margin: 0 auto 20px !important;
-        max-width: none !important;  /* drop max-width restriction on this page */
-        width: 100% !important;      /* occupy full available width */
-    }
-    
-    /* Make navigation bar match formation width */
-    .squad-nav {
-        padding: 8px 0 !important;   /* remove left/right padding to match formation */
-        margin: 0 !important;        /* remove margins */
-        width: 100% !important;      /* full width like formation */
-    }
-    
-    .squad-nav .btn-toolbar {
-        padding: 0 12px;             /* add internal padding for content */
-        width: 100%;
-        max-width: none !important;
-    }
-    
-    /* Button sizing for better tap targets */
-    .squad-nav .btn { margin-right: 8px; }
-    .squad-nav .btn:last-child { margin-right: 0; }
-    @media (max-width: 576px) {
-        .squad-nav .btn { margin-bottom: 6px; }
-    }
-    
-    /* Fix input group height consistency */
-    .input-group-sm .input-group-text,
-    .input-group-sm .form-control {
-        height: 31px !important;
-        line-height: 1.5;
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
-    }
-    
-    .input-group-sm .input-group-prepend .input-group-text {
-        border-right: 0;
-        border-top-right-radius: 0;
-        border-bottom-right-radius: 0;
-    }
-    
-    .input-group-sm .form-control {
-        border-left: 0;
-        border-top-left-radius: 0;
-        border-bottom-left-radius: 0;
-    }
-    
-    /* Center the input group within its container */
-    .input-group-sm {
-        justify-content: center;
-        align-items: center;
-        display: flex;
-        margin: 0;
-    }
-    
-    .input-group-sm .input-group-text,
-    .input-group-sm .form-control {
-        text-align: center;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    /* Ensure the parent div containing the input group is also vertically centered */
-    .btn-group {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    .btn-toolbar {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    /* Center the input group horizontally within its direct parent */
-    .btn-group .input-group {
-        margin: 0 auto;
-        margin-right: 15px;  /* Add right padding for visual balance */
-    }
-    
-    /* Alternative: Add padding to the input group itself */
-    .input-group-sm {
-        margin-left: 15px;
-        margin-right: 15px;
-    }
-    
-    /* Toggle switch styling */
-    .selection-mode-toggle {
-        display: flex;
-        align-items: center;
-        margin-left: 15px;
-    }
-    
-    .toggle-switch {
-        position: relative;
-        display: inline-block;
-        width: 60px;
-        height: 34px;
-        margin: 0 10px;
-    }
-    
-    .toggle-switch input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-    }
-    
-    .slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: #ccc;
-        transition: .4s;
-        border-radius: 34px;
-    }
-    
-    .slider:before {
-        position: absolute;
-        content: "";
-        height: 26px;
-        width: 26px;
-        left: 4px;
-        bottom: 4px;
-        background-color: white;
-        transition: .4s;
-        border-radius: 50%;
-    }
-    
-    input:checked + .slider {
-        background-color: #2196F3;
-    }
-    
-    input:checked + .slider:before {
-        transform: translateX(26px);
-    }
-    
-    .mode-label {
-        font-weight: bold;
-        font-size: 14px;
-    }
-    
-    .mode-label.active {
-        color: #2196F3;
-    }
-</style>
-
-<!-- Sub-navigation: Generate + Squad selectors + Toggle -->
 <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom mb-3 squad-nav">
     <div class="btn-toolbar w-100" role="toolbar" aria-label="Squad toolbar">
         <div class="btn-group" role="group" aria-label="Generate and select squad">
@@ -180,7 +24,6 @@
                     <option value="4-3-3">4-3-3</option>
                 </select>
             </div>
-            <!-- Games to Consider Selector -->
             <div class="input-group input-group-sm ml-2" style="width: auto;">
                 <div class="input-group-prepend">
                     <span class="input-group-text">Games</span>
@@ -196,15 +39,14 @@
             <button id="btn-squad-3" type="button" class="btn btn-success" onclick="showSquad(3)">Squad 3</button>
             <button id="btn-squad-4" type="button" class="btn btn-success" onclick="showSquad(4)">Squad 4</button>
         </div>
-        
         <!-- Selection Mode Toggle -->
-        <div class="selection-mode-toggle">
-            <span class="mode-label">ELO</span>
-            <label class="toggle-switch">
+        <div class="d-flex align-items-center ml-3">
+            <span class="mr-2 font-weight-bold text-success">ELO</span>
+            <label class="switch mb-0">
                 <input type="checkbox" id="selection-mode-toggle" checked>
-                <span class="slider"></span>
+                <span class="slider round"></span>
             </label>
-            <span class="mode-label active">Projected Points</span>
+            <span class="ml-2 font-weight-bold">Projected Points</span>
         </div>
     </div>
 </nav>
@@ -217,7 +59,6 @@
     </div>
 </div>
 
-<script src="{% static 'js/test.js' %}"></script>
 <script src="{% static 'js/squad_points.js' %}"></script>
 
 {% endblock %}

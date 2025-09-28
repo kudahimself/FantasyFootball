@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
         toggle.addEventListener('change', function() {
             if (!this.checked) {
                 // Redirect to ELO squads page
-                window.location.href = '/squads/';
+                window.location.href = '/squad_elo/';
             }
         });
     }
@@ -274,3 +274,4 @@ function getFormationPositions(formation) {
     
     return formations[formation] || formations['3-4-3'];
 }
+

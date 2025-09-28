@@ -15,7 +15,7 @@ def get_team_map(request):
     team_map = {team.fpl_team_id: team.name for team in teams}
     return JsonResponse(team_map)
 
-def get_squads(request):
+def generate_squads_elo(request):
     """
     Generate squads from database and return them as JSON, honoring an optional 'formation' query param.
     Uses SquadSelector for ELO-based optimization.
