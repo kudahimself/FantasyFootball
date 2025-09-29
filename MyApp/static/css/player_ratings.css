@@ -193,28 +193,28 @@
 
 /* FPL Difficulty-based colors */
 .fixture.difficulty-1 {
-    border-left-color: #28a745; /* Green - Very Easy */
-    background-color: #d4edda;
+    border-left-color: #084019; /* Green - Very Easy */
+    background-color: #084019;
 }
 
 .fixture.difficulty-2 {
-    border-left-color: #20c997; /* Light Green - Easy */
-    background-color: #d1ecf1;
+    border-left-color: #759927; /* Light Green - Easy */
+    background-color: #759927;
 }
 
 .fixture.difficulty-3 {
     border-left-color: #ffc107; /* Yellow - Average */
-    background-color: #fcfafa3cd;
+    background-color: #ffc107;
 }
 
 .fixture.difficulty-4 {
-    border-left-color: #dc3545; /* Red - Very Hard */
-    background-color: #f8d7da;
+    border-left-color: #d94e27; /* Red - Very Hard */
+    background-color: #d94e27;
 }
 
 .fixture.difficulty-5 {
-    border-left-color: #dc3545; /* Red - Very Hard */
-    background-color: #dd5b66;
+    border-left-color: #e1041a; /* Red - Very Hard */
+    background-color: #e1041a;
 }
 
 /* Player name links */

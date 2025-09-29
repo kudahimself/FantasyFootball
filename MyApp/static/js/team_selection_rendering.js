@@ -152,15 +152,23 @@ function renderSquad(squadData) {
     if (window.editMode) {
         // Edit the existing header div with id="team-selection-header"
         const editHeaderDiv = document.getElementById('team-selection-header');
+        console.log('[renderSquad] Edit mode ON. Header element:', editHeaderDiv);
         if (editHeaderDiv) {
             editHeaderDiv.textContent = 'Team Selection';
             editHeaderDiv.className = 'edit-team-header';
+            console.log('[renderSquad] Header updated to Team Selection, class set to edit-team-header');
+        } else {
+            console.warn('[renderSquad] Edit mode ON but header element not found');
         }
     } else {
         const headerDiv = document.getElementById('team-selection-header');
+        console.log('[renderSquad] Edit mode OFF. Header element:', headerDiv);
         if (headerDiv) {
             headerDiv.textContent = 'Fantasy 11';
             headerDiv.className = '';
+            console.log('[renderSquad] Header updated to Fantasy 11, class cleared');
+        } else {
+            console.warn('[renderSquad] Edit mode OFF but header element not found');
         }
     }
 

@@ -116,19 +116,19 @@
                 </td>
                 
                 <td>
-                    <span class="{% if player.elo >= 1800 %}elo-high{% elif player.elo >= 1400 %}elo-medium{% else %}elo-low{% endif %}">
+                    <span class="{% if player.elo >= 1900 %}elo-high{% elif player.elo >= 1400 %}elo-medium{% else %}elo-low{% endif %}">
                         {{ player.elo }}
                     </span>
                 </td>
                 
                 <td>
-                    <span class="{% if player.cost >= 10 %}cost-high{% elif player.cost >= 7 %}cost-medium{% else %}cost-low{% endif %}">
+                    <span class="{% if player.cost >= 8 %}cost-high{% elif player.cost >= 7 %}cost-medium{% else %}cost-low{% endif %}">
                         £{{ player.cost }}m
                     </span>
                 </td>
                 
                 <td>
-                    <span class="{% if player.projected_points >= 25 %}points-high{% elif player.projected_points >= 15 %}points-medium{% else %}points-low{% endif %}">
+                    <span class="{% if player.projected_points >= 11 %}points-high{% elif player.projected_points >= 7 %}points-medium{% else %}points-low{% endif %}">
                         {{ player.projected_points }}
                     </span>
                 </td>
