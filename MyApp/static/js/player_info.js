@@ -1,14 +1,19 @@
 // player_info.js
 // Requires Chart.js to be loaded in the template
 
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Debug: log the Elo data to the console
+    setupEloChart();
+    setupMatchSearch();
+    setupProjectedPointsButton();
+});
+
+function setupEloChart() {
     console.log('Elo Data:', window.eloData);
-    // If Chart.js didn't load for any reason, show fallback and bail out gracefully
+    const eloDataElem = document.getElementById('eloChart');
+    const fallbackElem = document.getElementById('eloChartFallback');
     if (typeof Chart === 'undefined') {
         console.error('Chart.js is not available. Ensure the CDN script is loading.');
-        const eloDataElem = document.getElementById('eloChart');
-        const fallbackElem = document.getElementById('eloChartFallback');
         if (eloDataElem) eloDataElem.style.display = 'none';
         if (fallbackElem) {
             fallbackElem.textContent = 'Chart library failed to load. Please refresh or check your network.';
@@ -16,9 +21,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         return;
     }
-    // Elo History Chart
-    const eloDataElem = document.getElementById('eloChart');
-    const fallbackElem = document.getElementById('eloChartFallback');
     if (eloDataElem && window.eloData && Array.isArray(window.eloData.dates) && window.eloData.dates.length > 0) {
         if (fallbackElem) fallbackElem.style.display = 'none';
         eloDataElem.style.display = '';
@@ -86,8 +88,9 @@ document.addEventListener('DOMContentLoaded', function() {
         eloDataElem.style.display = 'none';
         fallbackElem.style.display = '';
     }
+}
 
-    // Match search functionality
+function setupMatchSearch() {
     const matchSearch = document.getElementById('matchSearch');
     if (matchSearch) {
         matchSearch.addEventListener('keyup', function() {
@@ -99,16 +102,16 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-    
+}
 
-    // Projected Points functionality
+function setupProjectedPointsButton() {
     const loadProjectedBtn = document.getElementById('load-projected-btn');
     if (loadProjectedBtn) {
         loadProjectedBtn.addEventListener('click', function() {
             loadProjectedPoints();
         });
     }
-});
+}
 
 let teamIdToName = null;
 

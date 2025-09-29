@@ -2,7 +2,7 @@
 body {
     background: #0E223B;
     font-family: 'Segoe UI', Arial, sans-serif;
-    color: #fff;
+    color: #fcfafa;
     margin: 0;
     padding: 0;
 }
@@ -21,15 +21,15 @@ body {
 .squad-summary, .squad-summary .card, .squad-summary .card-body {
     background: transparent !important;
     background-color: transparent !important;
-    color: #fff !important;
+    color: #fcfafa !important;
     border: none !important;
     box-shadow: none !important;
 }
 .squad-summary .card-title {
-    color: #fff !important;
+    color: #fcfafa !important;
 }
 #squad > h2, #squad h2, #squad-title, .squad-title {
-    color: #fff !important;
+    color: #fcfafa !important;
 }
 .navbar,
 .navbar-expand-lg,
@@ -40,12 +40,12 @@ body {
 .squad-nav {
     background: transparent !important;
     background-color: transparent !important;
-    color: #fff !important;
+    color: #fcfafa !important;
     border: none !important;
     box-shadow: none !important;
 }
 .navbar .nav-link, .navbar .navbar-brand, .navbar .navbar-toggler-icon, .navbar .navbar-nav .nav-item .nav-link {
-    color: #fff !important;
+    color: #fcfafa !important;
 }
 .squad-attributes-pane {
     display: flex;
@@ -62,7 +62,7 @@ body {
     padding: 24px 10px 24px 10px;
     height: fit-content;
 }
-.player-svg-container img {
+.player-png-container img {
     transform: scaleX(1.1);
     display: block;
 }
@@ -181,7 +181,7 @@ body {
     box-shadow: none;
     width: 100%;
     max-width: 1200px;
-    margin: 0 auto 40px auto;
+    margin: 120px auto 40px auto;
     padding: 32px 24px 24px 24px;
     display: flex;
     flex-direction: column;
@@ -258,7 +258,7 @@ body {
     transform: translateY(-4px) scale(1.04);
     box-shadow: 0 6px 18px rgba(30,58,138,0.16);
 }
-.player-svg-container {
+.player-png-container {
     width: 54px;
     height: 54px;
     margin-bottom: 6px;
@@ -273,7 +273,7 @@ body {
         font-weight: 500;
         font-size: 0.78rem;
         color: #111;
-        background: #fff;
+        background: #fcfafa;
         border-radius: 6px;
         padding: 2px 8px;
         margin-bottom: 2px;

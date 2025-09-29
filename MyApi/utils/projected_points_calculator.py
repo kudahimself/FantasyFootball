@@ -61,6 +61,7 @@ async def calculate_and_store_projected_points(override_existing=True):
     from asgiref.sync import sync_to_async
     projections_created = 0
     skipped_fixtures = 0
+    skipped_players = []
     # Delete all ProjectedPoints records (full refresh)
     await sync_to_async(ProjectedPoints.objects.all().delete)()
     # Get all future PlayerFixtures
@@ -72,6 +73,7 @@ async def calculate_and_store_projected_points(override_existing=True):
             if not player:
                 print(f"[WARN] No Player found for fixture: {fixture.player_name} GW{fixture.gameweek}")
                 skipped_fixtures += 1
+                skipped_players.append(fixture.player_name)
                 continue
             expected_points = calculate_expected_points(
                 current_elo=player.elo,
@@ -127,7 +129,25 @@ async def calculate_and_store_projected_points(override_existing=True):
         except Exception as e:
             print(f"[ERROR] Projected points for {fixture.player_name} GW{fixture.gameweek}: {e}")
             skipped_fixtures += 1
+            skipped_players.append(fixture.player_name)
     print(f"[DEBUG] Created/updated {projections_created} ProjectedPoints records. Skipped {skipped_fixtures} fixtures.")
+
+    success = projections_created > 0
+    error_msg = None
+    if not success:
+        error_msg = f"No projected points created. Skipped {skipped_fixtures} fixtures. Check player name matching and fixture data. Skipped players: {', '.join(skipped_players[:10])}{'...' if len(skipped_players) > 10 else ''}"
+
+    unique_players_processed = len(set(fixture.player_name for fixture in fixtures)) - len(set(skipped_players))
+    total_players = len(set(fixture.player_name for fixture in fixtures))
+    return {
+        'success': success,
+        'fixtures_created': projections_created,
+        'total_projections': projections_created,
+        'successful_players': unique_players_processed,
+        'failed_players': len(set(skipped_players)),
+        'total_players': total_players,
+        'error': error_msg
+    }
 
 async def refresh_fixtures_util(next_gameweeks=3) -> dict:
     """

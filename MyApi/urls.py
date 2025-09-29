@@ -1,5 +1,4 @@
 from django.urls import path
-
 from . import views
 
 urlpatterns = [
@@ -34,4 +33,5 @@ urlpatterns = [
     path('test/analyze_squad/', views.test_analyze_squad_weaknesses, name='test_analyze_squad_weaknesses'),
     path('test/simulate_substitutions/', views.test_simulate_substitutions, name='test_simulate_substitutions'),
     path('update_current_squad/', views.update_current_squad, name='update_current_squad'),
+    path('recommend_individual_substitutes/', views.recommend_individual_substitutes_api, name='recommend_individual_substitutes_api'),
 ]

@@ -1264,3 +1264,20 @@ def update_current_squad(request):
         return JsonResponse({'success': True, 'squad': current_squad_instance.squad})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+def recommend_individual_substitutes_api(request):
+    """
+    API endpoint to get individual substitute recommendations for the current squad.
+    POST data: {'budget_constraint': 82.5}
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Only POST method allowed'})
+    try:
+        data = json.loads(request.body.decode('utf-8')) if request.body else {}
+        budget_constraint = float(data.get('budget_constraint', 82.5))
+        from MyApi.utils.recommend_substitutes import recommend_individual_substitutes
+        result = recommend_individual_substitutes(budget_constraint=budget_constraint)
+        return JsonResponse({'success': True, 'recommendations': result})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})

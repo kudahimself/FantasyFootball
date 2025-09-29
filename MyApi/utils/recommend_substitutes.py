@@ -1,3 +1,4 @@
+
 """
 Utility functions for recommending substitutes based on projected points optimization.
 Uses PuLP linear programming to find optimal packages of 3-4 substitutions together.
@@ -655,4 +656,72 @@ def simulate_substitution_impact_test(substitutions):
             'error': f'Failed to simulate substitution impact: {str(e)}',
             'total_points_improvement': 0,
             'successful_substitutions': []
+        }
+
+def recommend_individual_substitutes(budget_constraint=82.5):
+    """
+    Recommend the best individual substitute for each player in the current squad using projected points.
+    Args:
+        budget_constraint (float): Maximum budget for the squad (default 82.5)
+    Returns:
+        dict: List of recommended individual substitutions
+    """
+    try:
+        current_squad = get_current_squad_with_projected_points()
+        all_players = get_all_players_with_projected_points(exclude_current_squad=True)
+
+        position_mapping = {
+            'goalkeepers': 'Keeper',
+            'defenders': 'Defender',
+            'midfielders': 'Midfielder',
+            'forwards': 'Attacker'
+        }
+
+        recommendations = []
+        total_cost_change = 0
+        current_total_cost = sum(
+            player.get('cost', 0)
+            for pos in ['goalkeepers', 'defenders', 'midfielders', 'forwards']
+            for player in current_squad.get(pos, [])
+            if isinstance(player, dict)
+        )
+
+        for position in ['goalkeepers', 'defenders', 'midfielders', 'forwards']:
+            current_players = current_squad.get(position, [])
+            available_subs = [p for p in all_players if p['position'] == position_mapping[position]]
+            for current_player in current_players:
+                best_sub = None
+                best_improvement = 0
+                for sub in available_subs:
+                    improvement = sub['projected_points'] - current_player.get('projected_points', 0)
+                    cost_diff = sub['cost'] - current_player.get('cost', 0)
+                    # Only consider if improvement > 0 and swapping keeps squad under budget
+                    if improvement > 0:
+                        projected_total_cost = current_total_cost + cost_diff
+                        if projected_total_cost <= budget_constraint:
+                            if improvement > best_improvement:
+                                best_sub = sub
+                                best_improvement = improvement
+                if best_sub:
+                    recommendations.append({
+                        'current_player': current_player,
+                        'substitute': best_sub,
+                        'position': position,
+                        'improvement': round(best_improvement, 2),
+                        'cost_difference': round(best_sub['cost'] - current_player.get('cost', 0), 2)
+                    })
+                    total_cost_change += best_sub['cost'] - current_player.get('cost', 0)
+                    current_total_cost += best_sub['cost'] - current_player.get('cost', 0)
+
+        return {
+            'individual_recommendations': recommendations,
+            'total_cost_change': round(total_cost_change, 2),
+            'count': len(recommendations)
+        }
+    except Exception as e:
+        print(f"Error in recommend_individual_substitutes: {e}")
+        return {
+            'individual_recommendations': [],
+            'total_cost_change': 0,
+            'count': 0
         }

@@ -82,7 +82,7 @@
         <!-- Squad Display -->
         <div id="current-squad">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h2 id="team-selection-header">Fantasy 11</h2>
+                <h2 class="team-selection-header">Fantasy 11</h2>
                 <div class="d-flex" style="gap: 12px;">
                     <div class="badge bg-primary p-2" style="font-size: 0.9em;">
                         <i class="fas fa-chart-line"></i> Avg. ELO: <span id="squad-avg-elo">--</span>
@@ -116,22 +116,25 @@
 </div>
 
 <!-- Substitute Recommendations Section -->
-<div id="substitute-recommendations" style="margin: 30px 0; padding: 20px; background: #fff; border: 1px solid #dee2e6; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 style="margin: 0; color: #495057;">
+<div class="substitute-recommendations">
+    <div class="d-flex justify-content-between align-items-center mb-3" style="max-width: 1400px; margin: 10px auto 0 auto;">
+        <h3 style="margin: 0; color: #fcfafa;">
             <i class="fas fa-exchange-alt text-primary"></i> Recommended Substitutes
         </h3>
         <div>
-            <button class="btn btn-sm btn-outline-primary" onclick="loadSubstituteRecommendations()" title="Get recommendations">
-                <i class="fas fa-sync-alt"></i> Get Recommendations
+            <button class="btn btn-sm btn-outline-primary" style="color: #fcfafa; border-color: #fcfafa;" onclick="loadSubstituteRecommendations()" title="Get recommendations">
+                <i class="fas fa-sync-alt" style="color: #fcfafa;"></i> Get Recommendations
             </button>
-            <button class="btn btn-sm btn-outline-success" onclick="toggleRecommendationsSection()" title="Toggle section">
-                <i class="fas fa-eye" id="toggle-recommendations-icon"></i>
+            <button class="btn btn-sm btn-outline-info" style="color: #fcfafa; border-color: #fcfafa;" id="toggle-sub-mode-btn" onclick="toggleSubstituteMode()" title="Toggle substitute mode">
+                <i class="fas fa-list" style="color: #fcfafa;"></i> Individual Subs
+            </button>
+            <button class="btn btn-sm btn-outline-success" style="color: #fcfafa; border-color: #fcfafa;" onclick="toggleRecommendationsSection()" title="Toggle section">
+                <i class="fas fa-eye" id="toggle-recommendations-icon" style="color: #fcfafa;"></i>
             </button>
         </div>
     </div>
     
-    <div id="recommendations-content">
+    <div id="recommendations-content" class="recommendations-content">
         <div id="recommendations-loading" class="text-center py-4" style="display: none;">
             <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
             <p class="mt-2 text-muted">Analyzing your squad and finding the best substitutes...</p>
@@ -151,6 +154,7 @@
                 <!-- Recommendation cards will be populated here -->
             </div>
         </div>
+    </div>
         
         <div id="recommendations-error" class="alert alert-danger" style="display: none;">
             <i class="fas fa-exclamation-triangle"></i>

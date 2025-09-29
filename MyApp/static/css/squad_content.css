@@ -48,7 +48,7 @@
 }
 
 
-.player-svg-container {
+.player-png-container {
     width: 54px;
     height: 54px;
     margin-bottom: 6px;
@@ -56,7 +56,7 @@
     align-items: center;
     justify-content: center;
 }
-.player-svg-container img {
+.player-png-container img {
     width: 90px;
     height: 90px;
     transform: scaleX(1.1);
@@ -70,7 +70,7 @@
     font-weight: 500;
     font-size: 0.78rem;
     color: #111;
-    background: #fff;
+    background: #fcfafa;
     border-radius: 6px;
     padding: 2px 8px;
     margin-bottom: 2px;
@@ -83,7 +83,7 @@
     transform: translateY(-4px) scale(1.04);
     box-shadow: 0 6px 18px rgba(30,58,138,0.16);
 }
-.player-svg-container {
+.player-png-container {
     width: 54px;
     height: 54px;
     margin-bottom: 6px;
@@ -98,7 +98,7 @@
     font-weight: 500;
     font-size: 0.78rem;
     color: #111;
-    background: #fff;
+    background: #fcfafa;
     border-radius: 6px;
     padding: 2px 8px;
     margin-bottom: 2px;

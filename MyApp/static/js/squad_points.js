@@ -192,7 +192,7 @@ function generateFormationGrid(positions, data, targetElement) {
                 }
                 const playerDiv = document.createElement('div');
                 playerDiv.innerHTML = `
-                    <div class="player-svg-container">
+                    <div class="player-png-container">
                         <img src="/static/img/player.png" width="90" height="90" alt="Player Icon" />
                     </div>
                     <div class="player-svg-name">${displayName}</div>

@@ -1,3 +1,78 @@
+// Global toggle for substitute mode: true = package, false = individual
+let showPackageSubstitutes = true;
+
+function toggleSubstituteMode() {
+    showPackageSubstitutes = !showPackageSubstitutes;
+    // Update button text/icon
+    const btn = document.getElementById('toggle-sub-mode-btn');
+    if (btn) {
+        if (showPackageSubstitutes) {
+            btn.innerHTML = '<i class="fas fa-list" style="color: #fcfafa;"></i> Individual Subs';
+        } else {
+            btn.innerHTML = '<i class="fas fa-box" style="color: #fcfafa;"></i> Package Subs';
+        }
+    }
+    // Fetch and render recommendations for the selected mode
+    if (showPackageSubstitutes) {
+        loadSubstituteRecommendations();
+    } else {
+        loadIndividualSubstituteRecommendations();
+    }
+function loadIndividualSubstituteRecommendations() {
+    console.log('Loading individual substitute recommendations...');
+    document.getElementById('recommendations-loading').style.display = 'block';
+    document.getElementById('recommendations-empty').style.display = 'none';
+    document.getElementById('recommendations-list').style.display = 'none';
+    document.getElementById('recommendations-error').style.display = 'none';
+
+    fetch('/api/recommend_individual_substitutes/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({ budget_constraint: 82.5 })
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('recommendations-loading').style.display = 'none';
+        if (data.success && data.recommendations) {
+            displayIndividualSubstituteRecommendations(data.recommendations);
+        } else {
+            showRecommendationsError(data.error || 'Failed to get individual recommendations');
+        }
+    })
+    .catch(error => {
+        console.error('Error loading individual recommendations:', error);
+        document.getElementById('recommendations-loading').style.display = 'none';
+        showRecommendationsError('Network error while loading individual recommendations');
+    });
+}
+
+function displayIndividualSubstituteRecommendations(result) {
+    const cardsContainer = document.getElementById('recommendations-cards');
+    cardsContainer.innerHTML = '';
+    window.lastRecommendationsData = result; // cache for toggle
+        // Hide summary for individual mode
+        const summaryElement = document.getElementById('recommendations-summary');
+        if (summaryElement) summaryElement.style.display = 'none';
+    if (result.individual_recommendations && result.individual_recommendations.length > 0) {
+        result.individual_recommendations.forEach((rec, idx) => {
+            cardsContainer.innerHTML += createRecommendationCard(rec, idx, false);
+        });
+    } else {
+        cardsContainer.innerHTML = `
+            <div class="col-12">
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-check-circle"></i>
+                    No individual improvements found within budget constraints.
+                </div>
+            </div>
+        `;
+    }
+    document.getElementById('recommendations-list').style.display = 'block';
+}
+}
 
 
 function loadSubstituteRecommendations() {
@@ -7,6 +82,9 @@ function loadSubstituteRecommendations() {
     document.getElementById('recommendations-loading').style.display = 'block';
     document.getElementById('recommendations-empty').style.display = 'none';
     document.getElementById('recommendations-list').style.display = 'none';
+        // Show summary for package mode
+        const summaryElement = document.getElementById('recommendations-summary');
+        if (summaryElement) summaryElement.style.display = 'block';
     document.getElementById('recommendations-error').style.display = 'none';
     
     fetch('/api/test/recommend_substitutes/', {
@@ -79,11 +157,18 @@ function displaySubstituteRecommendations(data) {
     // Clear and populate recommendations cards
     const cardsContainer = document.getElementById('recommendations-cards');
     cardsContainer.innerHTML = '';
-    
+    window.lastRecommendationsData = data; // cache for toggle
     if (data.recommended_substitutes && data.recommended_substitutes.length > 0) {
-        // Create a single card with all transfers
-        const transfersCardHtml = createCombinedTransfersCard(data.recommended_substitutes, data.total_potential_improvement);
-        cardsContainer.innerHTML += transfersCardHtml;
+        if (showPackageSubstitutes) {
+            // Show package (combined) card
+            const transfersCardHtml = createCombinedTransfersCard(data.recommended_substitutes, data.total_potential_improvement);
+            cardsContainer.innerHTML += transfersCardHtml;
+        } else {
+            // Show individual cards
+            data.recommended_substitutes.forEach((rec, idx) => {
+                cardsContainer.innerHTML += createRecommendationCard(rec, idx, false);
+            });
+        }
     } else {
         cardsContainer.innerHTML = `
             <div class="col-12">

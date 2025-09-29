@@ -1,45 +1,15 @@
-.navbar,
-.navbar-expand-lg,
-.navbar-light,
-.bg-light,
-.border-bottom,
-.mb-3,
-.squad-nav {
-    background: transparent !important;
-    background-color: transparent !important;
-    color: #fff !important;
+.navbar {
+    background: #0E223B !important;
+    color: #fcfafa !important;
     border: none !important;
     box-shadow: none !important;
 }
-.navbar .nav-link, .navbar .navbar-brand, .navbar .navbar-toggler-icon, .navbar .navbar-nav .nav-item .nav-link {
-    color: #fff !important;
+.navbar .nav-link,
+.navbar .navbar-brand,
+.navbar .navbar-toggler-icon {
+    color: #fcfafa !important;
 }
-.squad-summary, .squad-summary .card, .squad-summary .card-body {
-    background: transparent !important;
-    background-color: transparent !important;
-    color: #fff !important;
-    border: none !important;
-    box-shadow: none !important;
-}
-.squad-summary .card-title {
-    color: #fff !important;
-}
-#squad > h2, #squad h2, #squad-title, .squad-title {
-    color: #fff !important;
-}
-#squad, #squad-content {
-    background: transparent !important;
-    background-color: transparent !important;
-    box-shadow: none !important;
-    border: none !important;
-}
-/* Ensure container-fluid is fully transparent so body background shows through */
-.container-fluid {
-    background: transparent !important;
-    background-color: transparent !important;
-    box-shadow: none !important;
-    border: none !important;
-}
+
 body {
     background: #0E223B;
     font-family: 'Segoe UI', Arial, sans-serif;
@@ -48,23 +18,31 @@ body {
     padding: 0;
 }
 
-
-
-
-/* Squad container styling */
+#squad > h2, #squad h2, #squad-title, .squad-title {
+    color: #fcfafa;
+    text-align: center;
+    margin-bottom: 20px;
+}
 #squad {
-    background: #f8f9fa;
     border-radius: 10px;
     padding: 20px;
     margin: 20px 0;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    /* No background, will inherit from body */
+}
+#squad-content {
+    background: inherit;
+    box-shadow: none;
+    border: none;
+}
+/* Ensure container-fluid is fully transparent so body background shows through */
+.container-fluid {
+    background: inherit;
+    box-shadow: none;
+    border: none;
 }
 
-#squad h2 {
-    color: #333;
-    text-align: center;
-    margin-bottom: 20px;
-}
+
 
 /* Button styling */
 button {
@@ -82,58 +60,14 @@ button:hover {
     background: #0056b3;
 }
 
-/* Responsive design */
-@media (max-width: 768px) {
-    #formation {
-        max-width: 95%;
-        padding: 15px;
-        min-height: 320px;
-    }
-    
-    .formation-row .player-name {
-        font-size: 12px;
-        max-width: 70px;
-        padding: 4px 6px;
-    }
+.squad-summary, .squad-summary .card, .squad-summary .card-body {
+    background: transparent !important;
+    background-color: transparent !important;
+    color: #fcfafa !important;
+    border: none !important;
+    box-shadow: none !important;
 }
-
-@media (max-width: 480px) {
-    .formation-row .player-name {
-        font-size: 11px;
-        max-width: 60px;
-        padding: 3px 5px;
-    }
-    
-    .formation-row .player-container {
-        margin: 5px;
-    }
-}
-
-/* Medium screens: optimize spacing */
-@media (min-width: 769px) and (max-width: 1199px) {
-    #formation {
-        max-width: 900px;
-        min-height: 380px;
-        padding: 25px;
-    }
-}
-
-/* Larger screens: scale player markers & labels but keep reasonable bounds */
-@media (min-width: 1200px) {
-    #formation {
-        max-width: 1200px;
-        min-height: 450px;
-        max-height: 70vh; /* don't exceed 70% of viewport height */
-    }
-    
-    .formation-row .player-circle {
-        width: 28px;
-        height: 28px;
-        font-size: 10px;
-    }
-    .formation-row .player-name {
-        font-size: 16px;
-        max-width: 120px;
-    }
+.squad-summary .card-title {
+    color: #fcfafa !important;
 }
 

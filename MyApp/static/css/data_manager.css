@@ -40,7 +40,7 @@
 
 .activity-log .log-entry.warning {
     border-left-color: #ffc107;
-    background: #fff3cd;
+    background: #fcfafa;
 }
 
 .activity-log .log-entry.info {
@@ -98,7 +98,7 @@
 }
 
 .status-message.warning {
-    background-color: #fff3cd;
+    background-color: #fcfafa;
     color: #856404;
     border: 1px solid #ffeaa7;
 }
