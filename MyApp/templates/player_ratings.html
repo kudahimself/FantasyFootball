@@ -6,7 +6,7 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/player_ratings.css' %}">
 
-<h1>Player Ratings</h1>
+<h1 class="page-title">Player Ratings</h1>
 
 {% if error %}
     <div class="alert alert-danger">
@@ -69,7 +69,7 @@
 <!-- Players Table -->
 <div class="table-container">
     <table class="table table-striped table-hover" id="players-table">
-        <thead class="thead-dark">
+        <thead class="thead-dark" style="background: #0E223B;color: #fcfafa;">
             <tr>
                 <th class="sortable" data-column="name" data-type="string">Player Name</th>
                 <th class="sortable" data-column="position" data-type="string">Position</th>

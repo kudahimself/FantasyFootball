@@ -1,14 +1,37 @@
 /* Player Ratings Page Styles */
+body {
+    background: #0E223B;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: #fcfafa;
+    margin: 0;
+    padding: 0;
+}
+
+.navbar {
+    background: #0E223B !important;
+    color: #fcfafa !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+.navbar .nav-link,
+.navbar .navbar-brand,
+.navbar .navbar-toggler-icon {
+    color: #fcfafa !important;
+}
+
+.page-title {
+    color: #fcfafa;
+}
 
 .table-container {
     overflow-x: auto;
 }
 
 .filters {
-    background: #f8f9fa;
     padding: 15px;
     border-radius: 5px;
     margin-bottom: 20px;
+    color: #fcfafa;
 }
 
 .filter-row {
@@ -30,6 +53,14 @@
     font-size: 0.9em;
 }
 
+.thead-dark {
+        background: #0E223B;
+        color: #fcfafa;
+}
+
+.player-row{
+    color: #fcfafa
+}
 .btn-clear {
     background: #6c757d;
     border: none;
@@ -124,11 +155,11 @@
 }
 
 .stats-summary {
-    background: #e9ecef;
     padding: 10px;
     border-radius: 5px;
     margin-bottom: 15px;
     text-align: center;
+    color: #fcfafa;
 }
 
 /* Responsive Design */
@@ -198,28 +229,28 @@
 }
 
 .fixture.difficulty-2 {
-    border-left-color: #759927; /* Light Green - Easy */
-    background-color: #759927;
+    border-left-color: #364f00; /* Light Green - Easy */
+    background-color: #364f00;
 }
 
 .fixture.difficulty-3 {
-    border-left-color: #ffc107; /* Yellow - Average */
-    background-color: #ffc107;
+    border-left-color: #654c00; /* Yellow - Average */
+    background-color: #654c00;
 }
 
 .fixture.difficulty-4 {
-    border-left-color: #d94e27; /* Red - Very Hard */
-    background-color: #d94e27;
+    border-left-color: #8e2f00; /* Red - Very Hard */
+    background-color: #8e2f00;
 }
 
 .fixture.difficulty-5 {
-    border-left-color: #e1041a; /* Red - Very Hard */
-    background-color: #e1041a;
+    border-left-color: #68000a; /* Red - Very Hard */
+    background-color: #68000a;
 }
 
 /* Player name links */
 .player-link {
-    color: #212529 !important;
+    color: #fcfafa !important;
     text-decoration: none !important;
     transition: all 0.2s ease;
 }
