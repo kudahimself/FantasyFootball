@@ -197,12 +197,26 @@ function renderSquad(squadData) {
                     const nameParts = playerObj.name.trim().split(' ');
                     displayName = nameParts.length > 1 ? nameParts[1] : nameParts[0];
                 }
-                    card.innerHTML = `
-                        <div class="player-png-container" style="position:relative;">
-                            <img src="/static/img/player.png" width="90" height="90" alt="Player Icon" />
-                        </div>
-                        <div class="player-svg-name">${displayName}</div>
-                    `;
+                    if (window.editMode) {
+                        card.innerHTML = `
+                            <div class="player-png-container" style="position:relative; cursor:pointer;"
+                                 onclick="removePlayer('${playerObj.id || playerObj.name}', '${playerObj.name}'); return false;"
+                                 title="Remove Player">
+                                <img src="/static/img/player.png" width="90" height="90" alt="Player Icon" />
+                                <span style="position:absolute;top:4px;right:4px;font-size:18px;color:#c00;">
+                                    &times;
+                                </span>
+                            </div>
+                            <div class="player-png-name">${displayName}</div>
+                        `;
+                    } else {
+                        card.innerHTML = `
+                            <div class="player-png-container" style="position:relative;">
+                                <img src="/static/img/player.png" width="90" height="90" alt="Player Icon" />
+                            </div>
+                            <div class="player-png-name">${displayName}</div>
+                        `;
+                    }
                 rowDiv.appendChild(card);
             });
             squadList.appendChild(rowDiv);

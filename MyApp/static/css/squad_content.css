@@ -26,7 +26,7 @@
     margin-bottom: 32px;
 }
 
-.player-svg-card {
+.player-png-card {
     border-radius: 0;
     box-shadow: none;
     padding: 18px 14px 20px 14px;
@@ -63,7 +63,7 @@
     display: block;
 }
 
-.player-svg-name {
+.player-png-name {
     font-weight: 700;
     font-size: 1.01rem;
     color: #1e3a8a;
@@ -79,7 +79,7 @@
     text-overflow: ellipsis;
     max-width: 120px;
 }
-.player-svg-card:hover {
+.player-png-card:hover {
     transform: translateY(-4px) scale(1.04);
     box-shadow: 0 6px 18px rgba(30,58,138,0.16);
 }
@@ -91,7 +91,7 @@
     align-items: center;
     justify-content: center;
 }
-.player-svg-name {
+.player-png-name {
     font-weight: 700;
     font-size: 1.01rem;
     color: #1e3a8a;

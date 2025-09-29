@@ -28,10 +28,7 @@ urlpatterns = [
     path('squad_points/<int:squad_number>/', views.get_squad_points, name='get_squad_points'),
     # Removed old optimized methods - now using only the player-by-player approach
     path('system_info/', views.system_info, name='system_info'),
-    # TEST ENDPOINTS for substitute recommendations (do not affect existing functionality)
-    path('test/recommend_substitutes/', views.test_recommend_substitutes, name='test_recommend_substitutes'),
-    path('test/analyze_squad/', views.test_analyze_squad_weaknesses, name='test_analyze_squad_weaknesses'),
-    path('test/simulate_substitutions/', views.test_simulate_substitutions, name='test_simulate_substitutions'),
     path('update_current_squad/', views.update_current_squad, name='update_current_squad'),
     path('recommend_individual_substitutes/', views.recommend_individual_substitutes_api, name='recommend_individual_substitutes_api'),
+    path('recommend_substitutes/', views.recommend_substitutes, name='recommend_substitutes'),
 ]

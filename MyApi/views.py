@@ -1152,88 +1152,6 @@ def get_squad_points(request, squad_number):
 
 
 
-
-
-# TEST FUNCTIONS FOR SUBSTITUTE RECOMMENDATIONS - DO NOT AFFECT EXISTING FUNCTIONALITY
-
-@csrf_exempt
-def test_recommend_substitutes(request):
-    """
-    TEST ENDPOINT: Recommend substitutes using projected points optimization.
-    This is a test function that doesn't affect existing functionality.
-    """
-    try:
-        from MyApi.utils.recommend_substitutes import recommend_substitutes_test
-        
-        # Get parameters from request
-        data = json.loads(request.body) if request.body else {}
-        max_recommendations = data.get('max_recommendations', 4)
-        budget_constraint = data.get('budget_constraint', 100.0)
-        
-        # Get recommendations
-        result = recommend_substitutes_test(max_recommendations, budget_constraint)
-        
-        return JsonResponse(result)
-        
-    except Exception as e:
-        return JsonResponse({
-            'success': False, 
-            'error': f'Test substitute recommendation failed: {str(e)}'
-        })
-
-
-@csrf_exempt 
-def test_analyze_squad_weaknesses(request):
-    """
-    TEST ENDPOINT: Analyze current squad weaknesses.
-    This is a test function that doesn't affect existing functionality.
-    """
-    try:
-        from MyApi.utils.recommend_substitutes import analyze_squad_weaknesses_test
-        
-        # Analyze current squad
-        result = analyze_squad_weaknesses_test()
-        
-        return JsonResponse(result)
-        
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': f'Test squad analysis failed: {str(e)}'
-        })
-
-
-@csrf_exempt
-def test_simulate_substitutions(request):
-    """
-    TEST ENDPOINT: Simulate the impact of proposed substitutions.
-    This is a test function that doesn't affect existing functionality.
-    """
-    try:
-        from MyApi.utils.recommend_substitutes import simulate_substitution_impact_test
-        
-        # Get substitutions from request
-        data = json.loads(request.body) if request.body else {}
-        substitutions = data.get('substitutions', [])
-        
-        if not substitutions:
-            return JsonResponse({
-                'success': False,
-                'error': 'No substitutions provided for simulation'
-            })
-        
-        # Simulate substitutions
-        result = simulate_substitution_impact_test(substitutions)
-        
-        return JsonResponse(result)
-        
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': f'Test substitution simulation failed: {str(e)}'
-        })
-
-
 @csrf_exempt
 def update_current_squad(request):
     """
@@ -1264,6 +1182,30 @@ def update_current_squad(request):
         return JsonResponse({'success': True, 'squad': current_squad_instance.squad})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+def recommend_substitutes(request):
+    """
+    API endpoint to recommend substitutes using projected points optimization.
+    """
+    try:
+        from MyApi.utils.recommend_substitutes import recommend_substitutes
+        
+        # Get parameters from request
+        data = json.loads(request.body) if request.body else {}
+        max_recommendations = data.get('max_recommendations', 4)
+        budget_constraint = data.get('budget_constraint', 100.0)
+        
+        # Get recommendations
+        result = recommend_substitutes(max_recommendations, budget_constraint)
+        
+        return JsonResponse(result)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False, 
+            'error': f'Test substitute recommendation failed: {str(e)}'
+        })
 
 @csrf_exempt
 def recommend_individual_substitutes_api(request):

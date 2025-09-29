@@ -87,7 +87,7 @@ function loadSubstituteRecommendations() {
         if (summaryElement) summaryElement.style.display = 'block';
     document.getElementById('recommendations-error').style.display = 'none';
     
-    fetch('/api/test/recommend_substitutes/', {
+    fetch('/api/recommend_substitutes/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
