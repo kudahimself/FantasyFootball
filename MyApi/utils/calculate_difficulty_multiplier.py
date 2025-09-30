@@ -559,7 +559,7 @@ def recalculate_difficulty_multipliers() -> Dict[str, Any]:
         print(f"📊 Found difficulty ratings for {len(opponent_difficulties)} opponents")
         
         # Get 2025-2026 season match data for players who started
-        # We'll get the last 4 games for each player
+        # We'll get the last 6 games for each player
         from django.db.models import Q
         
         # Get all players who have matches in 2025-2026 season
@@ -570,7 +570,7 @@ def recalculate_difficulty_multipliers() -> Dict[str, Any]:
         ).values_list('player_name', flat=True).distinct()
         
         print(f"🎯 Found {len(players_with_matches)} players with matches in 2025-2026 season")
-        print("📊 Analyzing last 4 games for each player to calculate difficulty multipliers...")
+        print("📊 Analyzing last 6 games for each player to calculate difficulty multipliers...")
         
         if len(players_with_matches) == 0:
             return {
@@ -583,17 +583,17 @@ def recalculate_difficulty_multipliers() -> Dict[str, Any]:
         processed_matches = 0
         
         for player_name in players_with_matches:
-            # Get last 4 games for this player (most recent first)
-            last_4_games = PlayerMatch.objects.filter(
+            # Get last 6 games for this player (most recent first)
+            last_6_games = PlayerMatch.objects.filter(
                 player_name=player_name,
                 season='2025-26',
                 minutes_played__gt=0,
                 elo_before_match__isnull=False,
                 points__isnull=False
-            ).order_by('-date')[:4]
+            ).order_by('-date')[:6]
             
             
-            for match in last_4_games:
+            for match in last_6_games:
                 # Try to match opponent with difficulty rating
                 opponent_difficulty = None
                 
@@ -617,7 +617,7 @@ def recalculate_difficulty_multipliers() -> Dict[str, Any]:
                         difficulty_data[opponent_difficulty].append(performance_ratio)
                         processed_matches += 1
         
-        print(f"✅ Processed {processed_matches} valid matches from last 4 games of each player")
+        print(f"✅ Processed {processed_matches} valid matches from last 6 games of each player")
         
         if processed_matches == 0:
             return {
