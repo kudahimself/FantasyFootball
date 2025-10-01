@@ -4,6 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from MyApi.models import CurrentSquad, Player
 from MyApi.utils.generate_squads import SquadSelector
 import json
+from django.contrib.auth.decorators import login_required
 
 # Create your views here.
 def get_team_map(request):
@@ -88,11 +89,9 @@ def get_current_squad(request):
     """
     A Django view that returns the current squad from the database as JSON.
     """
-    current_squad_instance = CurrentSquad.get_or_create_current_squad()
-    
+    current_squad_instance = CurrentSquad.get_or_create_current_squad(request.user)
     # Refresh squad data to ensure it has full player information
     current_squad_instance.refresh_squad_data()
-    
     return JsonResponse({'current_squad': current_squad_instance.squad})
 
 def get_all_players(request):
@@ -187,7 +186,7 @@ def add_player_to_squad(request):
         if not position or not player_name:
             return JsonResponse({'error': 'Position and player_name are required'}, status=400)
         
-        current_squad_instance = CurrentSquad.get_or_create_current_squad()
+        current_squad_instance = CurrentSquad.get_or_create_current_squad(request.user)
         success = current_squad_instance.add_player(position, player_name)
         
         if success:
@@ -214,7 +213,7 @@ def remove_player_from_squad(request):
         if not position or not player_name:
             return JsonResponse({'error': 'Position and player_name are required'}, status=400)
         
-        current_squad_instance = CurrentSquad.get_or_create_current_squad()
+        current_squad_instance = CurrentSquad.get_or_create_current_squad(request.user)
         success = current_squad_instance.remove_player(position, player_name)
         
         if success:
@@ -1152,6 +1151,7 @@ def get_squad_points(request, squad_number):
 
 
 
+@login_required
 @csrf_exempt
 def update_current_squad(request):
     """
@@ -1176,7 +1176,7 @@ def update_current_squad(request):
             squad_dict = local_team
         else:
             return JsonResponse({'error': 'squad must be a list or grouped dict.'}, status=400)
-        current_squad_instance = CurrentSquad.get_or_create_current_squad()
+        current_squad_instance = CurrentSquad.get_or_create_current_squad(request.user)
         current_squad_instance.squad = squad_dict
         current_squad_instance.save()
         return JsonResponse({'success': True, 'squad': current_squad_instance.squad})

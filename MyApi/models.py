@@ -1,4 +1,3 @@
-
 from django.db import models
 import json
 
@@ -200,6 +199,7 @@ class CurrentSquad(models.Model):
     """
     Model to store the current fantasy football squad with players in different positions.
     """
+    user = models.OneToOneField('auth.User', on_delete=models.CASCADE, related_name='current_squad')
     name = models.CharField(max_length=100, default="Current Squad")
     squad_data = models.TextField(default='{}')  # Store JSON data as text
     created_at = models.DateTimeField(auto_now_add=True)
@@ -207,6 +207,7 @@ class CurrentSquad(models.Model):
     
     class Meta:
         db_table = 'current_squad'
+        unique_together = ('user',)
     
     def __str__(self):
         return f"{self.name} - Updated: {self.updated_at}"
@@ -413,21 +414,22 @@ class CurrentSquad(models.Model):
         self.save()
     
     @classmethod
-    def get_or_create_current_squad(cls):
+    def get_or_create_current_squad(cls, user):
         """
-        Get the current squad or create one if it doesn't exist.
+        Get the current squad for a user or create one if it doesn't exist.
+        
+        Args:
+            user: The Django user instance
         
         Returns:
-            CurrentSquad: The current squad instance
+            CurrentSquad: The current squad instance for the user
         """
         squad, created = cls.objects.get_or_create(
-            name="Current Squad",
+            user=user,
             defaults={'name': "Current Squad"}
         )
-        
         if created or not squad.squad_data:
             squad.initialize_default_squad()
-        
         return squad
 
 

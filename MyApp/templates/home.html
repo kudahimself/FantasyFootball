@@ -1,29 +1,26 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Fantasy Football Home{% endblock %}
+
+{% block title %}Login{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/home.css' %}">
-
-
-<div class="home-flex-container">
-    <div class="squad-section">
-        <div style="display: flex; flex-direction: row; align-items: flex-start; justify-content: center; width: 100%;">
-            <div class="squad-attributes-pane">
-                <div class="nav-card-list" id="squad-attributes-list">
-                    <div class="nav-card"><i class="fas fa-bolt"></i><span>Projected Points: <span id="attr-projected-points">--</span></span></div>
-                    <div class="nav-card"><i class="fas fa-coins"></i><span>Team Cost: <span id="attr-team-cost">--</span></span></div>
-                    <div class="nav-card"><i class="fas fa-chart-line"></i><span>Average ELO: <span id="attr-avg-elo">--</span></span></div>
-                    <div class="nav-card"><i class="fas fa-user-plus"></i><span>Substitutes Available: <span id="attr-subs">--</span></span></div>
-                </div>
-            </div>
-            <div id="squad-list" class="squad-list">
-                <!-- Squad will be loaded here by JS -->
-            </div>
+<div class="container" style="max-width: 400px; margin: 60px auto;">
+    <h2 class="text-center mb-4">Login</h2>
+    <form method="post" action="{% url 'login' %}">
+        {% csrf_token %}
+        {% if form.errors %}
+            <div class="alert alert-danger">Invalid username or password.</div>
+        {% endif %}
+        <div class="form-group mb-3">
+            <label for="id_username">Username</label>
+            <input type="text" name="username" autofocus required class="form-control" id="id_username">
         </div>
-    </div>
+        <div class="form-group mb-3">
+            <label for="id_password">Password</label>
+            <input type="password" name="password" required class="form-control" id="id_password">
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Login</button>
+    </form>
 </div>
-
-<script src="{% static 'js/home.js' %}"></script>
 {% endblock %}

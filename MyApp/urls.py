@@ -1,7 +1,6 @@
-from django.urls import path
 
-from . import views
 from django.urls import path, include
+from . import views
 
 urlpatterns = [
     path("", views.home, name="home"),
@@ -12,4 +11,6 @@ urlpatterns = [
     path("player/<str:player_name>/", views.player_info, name="player_info"),
     path('squad_points/', views.squad_points_page, name='squad_points'),
     path('api/', include('MyApi.urls')),
+    path('accounts/', include('django.contrib.auth.urls')),
+    path('signup/', views.signup, name='signup'),
 ]

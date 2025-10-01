@@ -1,3 +1,5 @@
+# Redirect to team selection after login
+LOGIN_REDIRECT_URL = '/team_selection/'
 """
 Django settings for FantasyFootball project.
 
