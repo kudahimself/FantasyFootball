@@ -437,13 +437,13 @@ function loadCurrentSquadFromDatabase() {
         });
         const totalPlayers = Object.values(window.localTeam).reduce((acc, arr) => acc + arr.length, 0);
         console.log(`📊 Loaded ${totalPlayers} players from current squad`);
-        updateSquadBadges();
+        
         displayCurrentSquad();
+        
         console.log('✅ Current squad loaded and displayed.');
     } catch (e) {
         console.error('❌ Error loading current squad:', e);
         window.localTeam = [];
-        updateSquadBadges();
         displayCurrentSquad();
     }
 }

@@ -5,7 +5,11 @@ from MyApi.models import CurrentSquad, Player
 from django.contrib.auth import login
 from .forms import SignUpForm
 from django.shortcuts import redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import LogoutView
 import json
+from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_http_methods
 
 def home(request):
     """
@@ -13,6 +17,7 @@ def home(request):
     """
     return render(request, 'home.html')
 
+@login_required
 def team_selection(request):
     """
     Team Selection page for building and managing fantasy squads.
@@ -77,6 +82,7 @@ def team_selection(request):
     except Exception as e:
         return render(request, 'team_selection.html', {'players': [], 'error': f'Error loading player data: {str(e)}'})
 
+@login_required
 def squad_elo(request):
     squad_numbers = range(1, 5) 
     context = {
@@ -323,6 +329,7 @@ def data_manager(request):
     return render(request, 'data_manager.html', context)
 
 
+@login_required
 def squad_points_page(request):
     """
     Render the squad points page.
@@ -339,4 +346,8 @@ def signup(request):
     else:
         form = SignUpForm()
     return render(request, "registration/signup.html", {"form": form})
+
+@login_required
+def profile(request):
+    return render(request, 'profile.html')
 

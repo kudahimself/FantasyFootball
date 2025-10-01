@@ -5,6 +5,35 @@
 {% block title %}Fantasy Football Planner{% endblock %}
 
 {% block content %}
+{% if user.is_authenticated %}
+  <link rel="stylesheet" href="{% static 'css/squad_content.css' %}">
+  <div class="team-formation-pane">
+    <div id="current-squad">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 id="team-selection-header" class="team-selection-header">Fantasy 11</h2>
+        <div class="d-flex" style="gap: 12px;">
+          <div class="badge bg-primary p-2" style="font-size: 0.9em;">
+            <i class="fas fa-chart-line"></i> Avg. ELO: <span id="squad-avg-elo">--</span>
+          </div>
+          <div class="badge bg-info p-2" style="font-size: 0.9em;">
+            <i class="fas fa-star"></i> Projected Total Points: <span id="squad-projected-points">--</span>
+          </div>
+          <div class="badge bg-success p-2" style="font-size: 0.9em;">
+            <i class="fas fa-pound-sign"></i> Total Cost: £<span id="squad-total-cost">--</span>m
+          </div>
+        </div>
+      </div>
+      <div id="squad-content">
+        <div id="squad-list" class="squad-list"></div>
+      </div>
+      <div class="d-flex justify-content-center align-items-center mt-3">
+        <a id="make-changes-btn" class="btn btn-secondary ms-2" href="{% url 'team_selection' %}">
+          <i class="edit-mode-icon fas fa-edit"></i> Make Changes
+        </a>
+      </div>
+    </div>
+  </div>
+{% else %}
 <div class="container" style="max-width: 500px; margin: 80px auto; text-align: center;">
     <h1 class="mb-4">Fantasy Football Planner</h1>
     <p class="lead mb-4">Welcome! Plan your fantasy football squad, track player ratings, and optimize your team for the season.</p>
@@ -13,4 +42,17 @@
         <a href="{% url 'signup' %}" class="btn btn-success btn-lg mx-2">Sign Up</a>
     </div>
 </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/team_selection_rendering.js' %}"></script>
+<script src="{% static 'js/team_selection_updates.js' %}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('squad-list') && typeof displayCurrentSquad === 'function') {
+      displayCurrentSquad();
+    }
+  });
+</script>
 {% endblock %}

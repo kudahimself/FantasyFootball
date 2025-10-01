@@ -35,7 +35,6 @@ function discardLocalChanges() {
         });
 
         // Update all squad-related UI
-        if (typeof updateSquadBadges === 'function') updateSquadBadges();
         if (typeof updateSquadDisplay === 'function') updateSquadDisplay();
         if (typeof displayCurrentSquad === 'function') displayCurrentSquad();
 
@@ -54,7 +53,13 @@ function updateSquadDisplay(squadData) {
     squadList.innerHTML = '<div style="color:#888;text-align:center;width:100%;">Loading squad...</div>';
     console.log('Loaded current squad from API:', squadData);
     renderSquad(squadData);
-        // Add editable-squad-row class after squad rows are rendered
+
+    // Update squad badges after rendering squad
+    if (typeof updateSquadBadges === 'function') {
+        updateSquadBadges();
+    }
+
+    // Add editable-squad-row class after squad rows are rendered
     setTimeout(() => {
         const squadRows = document.querySelectorAll('.squad-row');
         if (window.editMode) {
@@ -63,6 +68,7 @@ function updateSquadDisplay(squadData) {
             squadRows.forEach(row => row.classList.remove('editable-squad-row'));
         }
     }, 0);
+
 }
 
 // Render players dynamically
@@ -134,6 +140,9 @@ function displayCurrentSquad() {
             window.localTeam = data.current_squad;
             console.log('Loaded current squad from API:', window.localTeam);
             renderSquad(window.localTeam);
+            if (typeof updateSquadBadges === 'function') {
+                updateSquadBadges();
+            }
         })
         .catch(() => {
             squadList.innerHTML = '<div style="color:#888;text-align:center;width:100%;">No squad data available.</div>';
