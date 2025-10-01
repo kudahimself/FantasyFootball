@@ -84,6 +84,105 @@ def squad_elo(request):
     }
     return render(request, 'squad_elo.html', context)
 
+def player_ratings(request):
+    """
+    Display all players with their ratings, cost, position, projected points, and next 3 fixtures.
+    Supports filtering and sorting functionality.
+    """
+    try:
+        # Load data from database using current gameweek from SystemSettings
+        from MyApi.models import SystemSettings
+        week = SystemSettings.get_settings().current_gameweek
+        players_queryset = Player.objects.filter(week=week)
+        print(f"[DEBUG] player_ratings: current_week from SystemSettings = {week}")
+
+        if not players_queryset.exists():
+            context = {
+                'players': [],
+                'total_players': 0,
+                'error': f'No player data found for week {week}. Please import data first.'
+            }
+            return render(request, 'player_ratings.html', context)
+
+        # Import models for fixtures and projected points
+        from MyApi.models import PlayerFixture, ProjectedPoints, Team
+
+        # Build a mapping from FPL team ID (as string) to team name
+        team_id_to_name = {str(team.fpl_team_id): team.name for team in Team.objects.all()}
+
+        # Convert to list of dictionaries for template
+        players_data = []
+        for player in players_queryset:
+            # Get projected points (total for next 3 games)
+            projected_points = 0
+            try:
+                total_projected = ProjectedPoints.get_total_projected_points(player.name, games=3)
+                projected_points = round(total_projected, 1) if total_projected else 0
+            except Exception as e:
+                projected_points = 0
+
+            # Get next 3 fixtures
+            next_fixtures = []
+            try:
+                fixtures = PlayerFixture.objects.filter(
+                    player_name=player.name
+                ).order_by('gameweek', 'fixture_date')[:3]
+
+                for fixture in fixtures:
+                    home_away = "vs" if fixture.is_home else "@"
+                    # Substitute team ID with name if possible
+                    opponent_display = team_id_to_name.get(str(fixture.opponent), fixture.opponent)
+                    next_fixtures.append({
+                        'text': f"{home_away} {opponent_display}",
+                        'difficulty': fixture.difficulty  # 1-5 FPL difficulty rating
+                    })
+            except Exception as e:
+                next_fixtures = [
+                    {'text': "No fixtures", 'difficulty': 3},
+                    {'text': "No fixtures", 'difficulty': 3},
+                    {'text': "No fixtures", 'difficulty': 3}
+                ]
+
+            # Ensure we have exactly 3 fixtures (pad with "No fixtures" if needed)
+            while len(next_fixtures) < 3:
+                next_fixtures.append({'text': "No fixtures", 'difficulty': 3})
+
+            player_data = {
+                'name': player.name,
+                'position': player.position,
+                'elo': round(float(player.elo), 1),
+                'cost': float(player.cost),
+                'comp': player.competition or 'Premier League',
+                'projected_points': projected_points,
+                'fixture_1': next_fixtures[0]['text'],
+                'fixture_1_difficulty': next_fixtures[0]['difficulty'],
+                'fixture_2': next_fixtures[1]['text'],
+                'fixture_2_difficulty': next_fixtures[1]['difficulty'],
+                'fixture_3': next_fixtures[2]['text'],
+                'fixture_3_difficulty': next_fixtures[2]['difficulty'],
+            }
+            players_data.append(player_data)
+
+        # Sort by Elo rating by default (highest first)
+        players_data.sort(key=lambda x: x['elo'], reverse=True)
+
+        context = {
+            'players': players_data,
+            'total_players': len(players_data)
+        }
+
+    except Exception as e:
+        print(f"Error loading player data: {e}")
+        context = {
+            'players': [],
+            'total_players': 0,
+            'error': str(e)
+        }
+
+    return render(request, 'player_ratings.html', context)
+
+
+
 def player_info(request, player_name):
     """
     Display detailed information for a specific player including match history and Elo chart.
