@@ -2,25 +2,15 @@
 {% load static %}
 
 
-{% block title %}Login{% endblock %}
+{% block title %}Fantasy Football Planner{% endblock %}
 
 {% block content %}
-<div class="container" style="max-width: 400px; margin: 60px auto;">
-    <h2 class="text-center mb-4">Login</h2>
-    <form method="post" action="{% url 'login' %}">
-        {% csrf_token %}
-        {% if form.errors %}
-            <div class="alert alert-danger">Invalid username or password.</div>
-        {% endif %}
-        <div class="form-group mb-3">
-            <label for="id_username">Username</label>
-            <input type="text" name="username" autofocus required class="form-control" id="id_username">
-        </div>
-        <div class="form-group mb-3">
-            <label for="id_password">Password</label>
-            <input type="password" name="password" required class="form-control" id="id_password">
-        </div>
-        <button type="submit" class="btn btn-primary w-100">Login</button>
-    </form>
+<div class="container" style="max-width: 500px; margin: 80px auto; text-align: center;">
+    <h1 class="mb-4">Fantasy Football Planner</h1>
+    <p class="lead mb-4">Welcome! Plan your fantasy football squad, track player ratings, and optimize your team for the season.</p>
+    <div class="d-flex justify-content-center gap-3 mt-4">
+        <a href="{% url 'login' %}" class="btn btn-primary btn-lg mx-2">Login</a>
+        <a href="{% url 'signup' %}" class="btn btn-success btn-lg mx-2">Sign Up</a>
+    </div>
 </div>
 {% endblock %}

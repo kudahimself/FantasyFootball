@@ -1190,17 +1190,13 @@ def recommend_substitutes(request):
     """
     try:
         from MyApi.utils.recommend_substitutes import recommend_substitutes
-        
         # Get parameters from request
         data = json.loads(request.body) if request.body else {}
         max_recommendations = data.get('max_recommendations', 4)
         budget_constraint = data.get('budget_constraint', 100.0)
-        
-        # Get recommendations
-        result = recommend_substitutes(max_recommendations, budget_constraint)
-        
+        # Get recommendations (now user-specific)
+        result = recommend_substitutes(request.user, max_recommendations, budget_constraint)
         return JsonResponse(result)
-        
     except Exception as e:
         return JsonResponse({
             'success': False, 
@@ -1219,7 +1215,7 @@ def recommend_individual_substitutes_api(request):
         data = json.loads(request.body.decode('utf-8')) if request.body else {}
         budget_constraint = float(data.get('budget_constraint', 82.5))
         from MyApi.utils.recommend_substitutes import recommend_individual_substitutes
-        result = recommend_individual_substitutes(budget_constraint=budget_constraint)
+        result = recommend_individual_substitutes(request.user, budget_constraint=budget_constraint)
         return JsonResponse({'success': True, 'recommendations': result})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})

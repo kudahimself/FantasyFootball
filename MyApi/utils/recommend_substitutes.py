@@ -10,17 +10,17 @@ from django.db.models import Sum
 from MyApi.models import Player, ProjectedPoints, SystemSettings, CurrentSquad
 
 
-def get_current_squad_with_projected_points():
+def get_current_squad_with_projected_points(user):
     """
-    Get the current squad with projected points data for each player.
-    
+    Get the current squad with projected points data for each player, for a specific user.
+    Args:
+        user: Django user instance
     Returns:
         dict: Current squad with projected points data
     """
     try:
-        current_squad_instance = CurrentSquad.get_or_create_current_squad()
+        current_squad_instance = CurrentSquad.get_or_create_current_squad(user)
         current_squad = current_squad_instance.squad
-        
         # Enrich each player with projected points data
         enriched_squad = {
             'goalkeepers': [],
@@ -28,29 +28,23 @@ def get_current_squad_with_projected_points():
             'midfielders': [],
             'forwards': []
         }
-        
         current_week = SystemSettings.get_current_gameweek()
-        
         for position in ['goalkeepers', 'defenders', 'midfielders', 'forwards']:
             if position in current_squad:
                 for player_data in current_squad[position]:
                     if isinstance(player_data, dict) and 'name' in player_data:
                         player_name = player_data['name']
-                        
                         # Get projected points for this player
                         total_projected = ProjectedPoints.objects.filter(
                             player_name=player_name
                         ).aggregate(
                             total=Sum('adjusted_expected_points')
                         )['total'] or 0
-                        
                         # Create enriched player data
                         enriched_player = player_data.copy()
                         enriched_player['projected_points'] = round(total_projected, 1)
                         enriched_squad[position].append(enriched_player)
-        
         return enriched_squad
-        
     except Exception as e:
         print(f"Error getting current squad with projected points: {e}")
         return {
@@ -61,46 +55,39 @@ def get_current_squad_with_projected_points():
         }
 
 
-def get_all_players_with_projected_points(exclude_current_squad=True):
+def get_all_players_with_projected_points(user, exclude_current_squad=True):
     """
     Get all available players with their projected points data.
-    
     Args:
+        user: Django user instance
         exclude_current_squad (bool): Whether to exclude current squad players
-    
     Returns:
         list: List of all players with projected points, sorted by points descending
     """
     try:
         current_week = SystemSettings.get_current_gameweek()
         players = Player.objects.filter(week=current_week)
-        
         # Get current squad player names if excluding them
         current_squad_players = set()
         if exclude_current_squad:
-            current_squad_instance = CurrentSquad.get_or_create_current_squad()
+            current_squad_instance = CurrentSquad.get_or_create_current_squad(user)
             current_squad = current_squad_instance.squad
-            
             for position in ['goalkeepers', 'defenders', 'midfielders', 'forwards']:
                 if position in current_squad:
                     for player_data in current_squad[position]:
                         if isinstance(player_data, dict) and 'name' in player_data:
                             current_squad_players.add(player_data['name'])
-        
         players_with_projections = []
-        
         for player in players:
             # Skip if player is already in current squad (when excluding)
             if exclude_current_squad and player.name in current_squad_players:
                 continue
-                
             # Get total projected points for this player
             total_projected = ProjectedPoints.objects.filter(
                 player_name=player.name
             ).aggregate(
                 total=Sum('adjusted_expected_points')
             )['total'] or 0
-            
             players_with_projections.append({
                 'name': player.name,
                 'position': player.position,
@@ -109,12 +96,9 @@ def get_all_players_with_projected_points(exclude_current_squad=True):
                 'elo': player.elo,
                 'projected_points': round(total_projected, 1)
             })
-        
         # Sort by projected points (descending)
         players_with_projections.sort(key=lambda x: x['projected_points'], reverse=True)
-        
         return players_with_projections
-        
     except Exception as e:
         print(f"Error getting players with projected points: {e}")
         return []
@@ -485,13 +469,17 @@ def extract_optimization_results(prob, substitution_options, current_total_cost,
         'available_budget': available_budget
     }
 
-def recommend_substitutes(max_recommendations=4, budget_constraint=100.0):
+def recommend_substitutes(user, max_recommendations=4, budget_constraint=100.0):
     """
     Orchestrates optimized package substitute recommendations using helper functions.
+    Args:
+        user: Django user instance
+        max_recommendations: int
+        budget_constraint: float
     """
     try:
-        current_squad = get_current_squad_with_projected_points()
-        all_players = get_all_players_with_projected_points(exclude_current_squad=True)
+        current_squad = get_current_squad_with_projected_points(user)
+        all_players = get_all_players_with_projected_points(user, exclude_current_squad=True)
         current_formation = detect_formation_from_squad(current_squad)
         current_total_points = calculate_squad_total_projected_points(current_squad)
         current_total_cost = 0
@@ -501,7 +489,6 @@ def recommend_substitutes(max_recommendations=4, budget_constraint=100.0):
                 if isinstance(player, dict) and 'cost' in player:
                     current_total_cost += player['cost']
                     current_squad_players[position].append(player)
-
         # Build optimization problem
         prob = pulp.LpProblem("Squad_Optimization", pulp.LpMaximize)
         substitution_options, substitution_vars, current_player_vars = build_substitution_options(current_squad_players, all_players)
@@ -510,7 +497,6 @@ def recommend_substitutes(max_recommendations=4, budget_constraint=100.0):
                        current_squad_players, current_formation, budget_constraint, current_total_cost, max_recommendations)
         prob.solve(pulp.PULP_CBC_CMD(msg=0))
         results = extract_optimization_results(prob, substitution_options, current_total_cost, budget_constraint, current_total_points)
-
         return {
             'success': True,
             'optimization_status': 'optimal' if prob.status == pulp.LpStatusOptimal else 'suboptimal',
@@ -541,25 +527,24 @@ def recommend_substitutes(max_recommendations=4, budget_constraint=100.0):
             'package_optimization': True
         }
 
-def recommend_individual_substitutes(budget_constraint=82.5):
+def recommend_individual_substitutes(user, budget_constraint=82.5):
     """
     Recommend the best individual substitute for each player in the current squad using projected points.
     Args:
+        user: Django user instance
         budget_constraint (float): Maximum budget for the squad (default 82.5)
     Returns:
         dict: List of recommended individual substitutions
     """
     try:
-        current_squad = get_current_squad_with_projected_points()
-        all_players = get_all_players_with_projected_points(exclude_current_squad=True)
-
+        current_squad = get_current_squad_with_projected_points(user)
+        all_players = get_all_players_with_projected_points(user, exclude_current_squad=True)
         position_mapping = {
             'goalkeepers': 'Keeper',
             'defenders': 'Defender',
             'midfielders': 'Midfielder',
             'forwards': 'Attacker'
         }
-
         recommendations = []
         cheaper_similar_all = []
         total_cost_change = 0
@@ -569,7 +554,6 @@ def recommend_individual_substitutes(budget_constraint=82.5):
             for player in current_squad.get(pos, [])
             if isinstance(player, dict)
         )
-
         for position in ['goalkeepers', 'defenders', 'midfielders', 'forwards']:
             current_players = current_squad.get(position, [])
             available_subs = [p for p in all_players if p['position'] == position_mapping[position]]
@@ -596,12 +580,10 @@ def recommend_individual_substitutes(budget_constraint=82.5):
                     })
                     total_cost_change += best_sub['cost'] - current_player.get('cost', 0)
                     current_total_cost += best_sub['cost'] - current_player.get('cost', 0)
-
                 # Find cheaper similar players (max 1 point less, at least 1 mil cheaper)
                 cheaper_similar = find_cheaper_similar_players(current_player, available_subs, point_threshold=1.0, min_cost_diff=1.0)
                 if cheaper_similar:
                     cheaper_similar_all.extend(cheaper_similar)
-
         return {
             'individual_recommendations': recommendations,
             'cheaper_similar_recommendations': cheaper_similar_all,
