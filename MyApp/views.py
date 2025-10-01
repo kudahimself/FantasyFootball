@@ -75,7 +75,8 @@ def team_selection(request):
             'players_json': json.dumps(players_data),
             'current_squad': current_squad,
             'current_squad_json': json.dumps(current_squad),
-            'total_players': len(players_data)
+            'total_players': len(players_data),
+            'current_gameweek': week
         }
         return render(request, 'team_selection.html', context)
 
