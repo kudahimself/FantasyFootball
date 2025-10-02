@@ -24,27 +24,22 @@ def team_selection(request):
     Renders player list on the server-side like player_ratings.
     """
     try:
-        from MyApi.models import SystemSettings
+        from MyApi.models import SystemSettings, ProjectedPoints, UserSquad
         week = SystemSettings.get_settings().current_gameweek
         players_queryset = Player.objects.filter(week=week)
 
         if not players_queryset.exists():
             return render(request, 'team_selection.html', {'players': [], 'error': f'No player data found for week {week}.'})
 
-        # Import models for projected points
-        from MyApi.models import ProjectedPoints
-
+        position_map = {'Keeper': 'GKP', 'Defender': 'DEF', 'Midfielder': 'MID', 'Attacker': 'FWD'}
         players_data = []
         for player in players_queryset:
-            # Get projected points (total for next 3 games)
-            projected_points = 0
             try:
                 total_projected = ProjectedPoints.get_total_projected_points(player.name, games=3)
                 projected_points = round(total_projected, 1) if total_projected else 0
-            except Exception as e:
+            except Exception:
                 projected_points = 0
 
-            position_map = {'Keeper': 'GKP', 'Defender': 'DEF', 'Midfielder': 'MID', 'Attacker': 'FWD'}
             players_data.append({
                 'id': player.id,
                 'name': player.name,
@@ -57,24 +52,26 @@ def team_selection(request):
 
         players_data.sort(key=lambda x: x['elo'], reverse=True)
 
-        # Load current squad from database
-        try:
-            current_squad_instance = CurrentSquad.get_or_create_current_squad(request.user)
-            current_squad = current_squad_instance.squad
-        except Exception as e:
-            print(f"Error loading current squad: {e}")
-            current_squad = {
-                "goalkeepers": [],
-                "defenders": [],
-                "midfielders": [],
-                "forwards": []
-            }
+        # Build squads dict: {week: squad_data}
+        squads = {}
+        for offset in range(0, 4):
+            w = week + offset
+            user_squad = UserSquad.objects.filter(user=request.user, week=w).first()
+            if user_squad:
+                squads[w] = user_squad.squad
+            else:
+                squads[w] = {
+                    "goalkeepers": [],
+                    "defenders": [],
+                    "midfielders": [],
+                    "forwards": []
+                } if offset == 0 else None
 
         context = {
             'players': players_data,
             'players_json': json.dumps(players_data),
-            'current_squad': current_squad,
-            'current_squad_json': json.dumps(current_squad),
+            'squads': squads,
+            'squads_json': json.dumps(squads),
             'total_players': len(players_data),
             'current_gameweek': week
         }

@@ -525,4 +525,16 @@ h1, h2 { margin-left: 10px; }
     margin: 10px auto 0 auto;
 }
 
+.active-gameweek {
+    background-color: #28a745; /* Bootstrap success green */
+    color: white;
+    border-color: #28a745;
+}
+
+/* Optional: Add hover effect for active gameweek */
+.active-gameweek:hover {
+    background-color: #218838; /* Darker green */
+    border-color: #1e7e34;
+}
+
 

@@ -44,7 +44,7 @@ function addPlayer(playerId, playerName) {
         alert('Edit mode is not enabled. Please toggle edit mode to make changes.');
         return;
     }
-
+    window.localTeam = window.localTeams[window.selectedgw] || window.localTeams['current'];
     console.log('➕ Adding player:', playerName, 'ID:', playerId);
     console.log('📊 dynamicAllPlayers array length:', dynamicAllPlayers.length);
 
@@ -87,8 +87,8 @@ function addPlayer(playerId, playerName) {
 
     // Add player to correct position group
     window.localTeam[posGroup].push(player);
-    updateSquadBadges();
-    updateSquadDisplay(window.localTeam);
+    window.localTeams[window.selectedgw] = window.localTeam;
+    updateSquadDisplay(window.localTeams, window.selectedgw);
     console.log(`✅ Added ${playerName} to team (${posGroup}). Team size: ${totalPlayers + 1}`);
     showStatusMessage(`Added ${playerName} to your team.`, 'success');
 }
@@ -97,7 +97,7 @@ function removePlayer(playerId, playerName) {
     if (!window.editMode) {
         return;
     }
-
+    window.localTeam = window.localTeams[window.selectedgw];
     // If localTeam is an object with position arrays
     let removed = null;
     let changed = false;
@@ -115,18 +115,30 @@ function removePlayer(playerId, playerName) {
         }
     }
     if (changed) {
-        updateSquadBadges();
-        updateSquadDisplay(window.localTeam);
+        window.localTeams[window.selectedgw] = window.localTeam;
+        updateSquadDisplay(window.localTeams, window.selectedgw);
         console.log(`🗑️ Removed ${playerName} from local team.`);
     }
 }
 
 function applyChangesToBackend() {
     // Save the entire localTeam as the new current squad, grouped by position with full player objects
-    if (!window.localTeam || window.localTeam.length === 0) {
+    if (
+        !window.localTeam ||
+        (
+            Array.isArray(window.localTeam) && window.localTeam.length === 0
+        ) ||
+        (
+            typeof window.localTeam === 'object' &&
+            ['goalkeepers', 'defenders', 'midfielders', 'forwards'].every(
+                pos => !window.localTeam[pos] || window.localTeam[pos].length === 0
+            )
+        )
+    ) {
         alert('No players in your squad to save!');
         return;
     }
+    const gameweek = window.selectedgw;
     // Flatten grouped localTeam object into a single array
     const squadToSend = []
         .concat(
@@ -144,11 +156,12 @@ function applyChangesToBackend() {
         });
     const btn = document.getElementById('apply-changes-btn');
     if (btn) btn.disabled = true;
-    fetch('/api/update_current_squad/', {
+    fetch(`/api/update_current_squad/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+            'Gameweek': gameweek // Add gameweek to the headers
         },
         body: JSON.stringify({ squad: squadToSend })
     })
@@ -158,6 +171,9 @@ function applyChangesToBackend() {
         if (data.success) {
             // Refresh the page after successful save
             location.reload();
+            window.localTeams[window.selectedgw] = window.localTeam;
+            window.squads = {};
+            window.squads = JSON.parse(JSON.stringify(window.localTeams));
         } else {
             // Optionally show a non-intrusive error message
             showStatusMessage('Error saving squad: ' + (data.error || 'Unknown error'), 'error');

@@ -49,44 +49,6 @@ function handleSearch() {
     filterPlayers(searchTerm);
 }
 
-function loadAllPlayers() {
-    console.log("Loading all available players from server...");
-    
-    fetch('/api/all-players/')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.error) {
-                showStatusMessage(data.error, 'error');
-                return;
-            }
-            allPlayers = data.players;
-            
-            // Create flat array for searching
-            allPlayersFlat = [];
-            Object.keys(allPlayers).forEach(position => {
-                allPlayers[position].forEach(player => {
-                    allPlayersFlat.push({
-                        ...player,
-                        position: position
-                    });
-                });
-            });
-            
-            console.log("All players loaded:", allPlayers);
-            console.log("Flat players array:", allPlayersFlat);
-            showStatusMessage('Players loaded successfully!', 'success');
-        })
-        .catch(error => {
-            console.error('Error loading players:', error);
-            showStatusMessage('Error loading players. Please try again.', 'error');
-        });
-}
-
 // Intelligent player search function
 function searchPlayers(query) {
     const resultsContainer = document.getElementById('player-search-results');
@@ -243,11 +205,6 @@ document.addEventListener('click', function(event) {
 });
 
 
-// Generate formation grid (reused from squads.js but adapted for current squad)
-
-// Generate formation grid (reused from squads.js but adapted for current squad)
-
-
 // Helper function to convert label to position key
 function getPositionKey(label) {
     const labelMap = {
@@ -258,7 +215,6 @@ function getPositionKey(label) {
     };
     return labelMap[label];
 }
-
 
 // Show status messages
 function showStatusMessage(message, type) {
@@ -305,9 +261,25 @@ function getCsrfToken() {
 // Also try with DOMContentLoaded as backup
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, initializing...');
+
+    // Ensure window.localTeam is initialized with the current gameweek's data
+    const currentGameweek = window.gw; // Assuming `window.gw` contains the current gameweek
+    if (window.squads && window.squads[currentGameweek]) {
+        // Deep copy to avoid mutating the original squads object
+        window.localTeams = JSON.parse(JSON.stringify(window.squads));
+        console.log(`✅ Loaded data for gameweek ${currentGameweek}:`, window.localTeams);
+    } else {
+        console.error(`❌ No data found for gameweek ${currentGameweek}.`);
+        window.localTeams = {}; // Provide a default empty object
+    }
+
     setTimeout(function() {
-        loadCurrentSquadFromDatabase();
-        loadAllPlayers();
+        if (window.localTeams) {
+            updateSquadDisplay(window.localTeams);
+        } else {
+            console.error('❌ localTeam is undefined or empty.');
+        }
+
         // Load recommendations after squad is loaded
         setTimeout(function() {
             loadSubstituteRecommendations();
@@ -391,10 +363,10 @@ document.addEventListener('DOMContentLoaded', function() {
 // Load current squad from database (loads into localTeam)
 function loadCurrentSquadFromDatabase() {
     try {
-        window.localTeam = {};
+        window.localSquads = {};
         const currentSquadData = window.currentSquadData || {};
         window.currentSquad = currentSquadData;
-        console.log('📊 Loading current squad from database:', currentSquadData);
+        console.log('📊 Loading user squadd from database:', currentSquadData);
         let playerData = window.serverPlayers;
         if (!playerData) {
             console.error('window.serverPlayers is not defined. Cannot match players.');
@@ -407,7 +379,7 @@ function loadCurrentSquadFromDatabase() {
             'forwards': 'FWD'
         };
         // Build localTeam as an object with grouped arrays
-        window.localTeam = {
+        window.localTeams = {
             goalkeepers: [],
             defenders: [],
             midfielders: [],
@@ -448,11 +420,6 @@ function loadCurrentSquadFromDatabase() {
     }
 }
 
-// Initialize when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    loadCurrentSquadFromDatabase();
-    setTimeout(updateSquadDisplay, 0);
-});
 
 
 
@@ -548,48 +515,43 @@ function resetFilters() {
     updatePlayerCounter();
 }
 
-
-
-
-// Filter and render function (corrected version)
-function filterAndRender() {
-    const searchTerm = searchInput.value.toLowerCase().trim();
-    let visibleCount = 0;
-
-    playerCards.forEach(card => {
-        const name = card.dataset.name || '';
-        const team = card.dataset.team || '';
-        const playerPosition = card.getAttribute('data-position') || ''; // More direct attribute access
-
-        const matchesSearch = searchTerm === '' || name.includes(searchTerm) || team.includes(searchTerm);
-        const matchesPosition = currentPositionFilter === 'all' || playerPosition === currentPositionFilter;
-
-        if (matchesSearch && matchesPosition) {
-            card.style.display = 'flex';
-            visibleCount++;
-        } else {
-            card.style.display = 'none';
-        }
-    });
-
-    playerCounter.textContent = `${visibleCount} of {{ total_players }} players shown`;
-}
-
 // Initialize with server data
 function initializeWithServerData() {
     try {
         console.log('📊 Initializing with server data...');
-        
+
         if (typeof window.serverPlayers !== 'undefined' && Array.isArray(window.serverPlayers) && window.serverPlayers.length > 0) {
             // Use all players instead of slicing to 5
             dynamicAllPlayers = window.serverPlayers; 
             dynamicFilteredPlayers = [...dynamicAllPlayers];
-            
+
             // Also update the global reference
             window.dynamicAllPlayers = dynamicAllPlayers;
-            
+
+            // Create flat array for searching
+            allPlayersFlat = [];
+
+            if (Array.isArray(dynamicAllPlayers)) {
+                // If dynamicAllPlayers is already a flat array
+                allPlayersFlat = dynamicAllPlayers.map(player => ({
+                    ...player,
+                    position: player.position || 'unknown'
+                }));
+            } else {
+                // If dynamicAllPlayers is an object with position keys
+                Object.keys(dynamicAllPlayers).forEach(position => {
+                    dynamicAllPlayers[position].forEach(player => {
+                        allPlayersFlat.push({
+                            ...player,
+                            position: position
+                        });
+                    });
+                });
+            }
+
             console.log(`✅ Success! Loaded ${dynamicAllPlayers.length} players.`);
-            
+            console.log("Flat players array:", allPlayersFlat);
+
             // Render players and update counter
             renderPlayers();
             updatePlayerCounter();
@@ -600,15 +562,15 @@ function initializeWithServerData() {
             if (initialLoading) {
                 initialLoading.style.display = 'none';
             }
-            
+
         } else {
             console.warn('⚠️ No player data found from server. `serverPlayers` is either undefined, not an array, or empty.');
             throw new Error('No valid player data was provided by the server.');
         }
-        
+
     } catch (error) {
         console.error('❌ Critical Error: Could not initialize player data.', error);
-        
+
         const playersList = document.getElementById('players-list');
         if (playersList) {
             playersList.innerHTML = `

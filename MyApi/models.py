@@ -617,3 +617,38 @@ class DifficultyMultiplier(models.Model):
                     'sample_size': sample_size
                 }
             )
+
+
+class UserSquad(models.Model):
+    """
+    Stores a fantasy football squad for a user for a specific week (future or past).
+    """
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='user_squads')
+    week = models.IntegerField(db_index=True)
+    name = models.CharField(max_length=100, default="Squad")
+    squad_data = models.TextField(default='{}')  # Store JSON data as text
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'user_squad'
+        unique_together = ('user', 'week')
+        ordering = ['user', 'week']
+
+    def __str__(self):
+        return f"{self.user.username} - GW{self.week} - {self.name}"
+
+    @property
+    def squad(self):
+        if self.squad_data:
+            return json.loads(self.squad_data)
+        return {
+            "goalkeepers": [],
+            "defenders": [],
+            "midfielders": [],
+            "forwards": []
+        }
+
+    @squad.setter
+    def squad(self, value):
+        self.squad_data = json.dumps(value)

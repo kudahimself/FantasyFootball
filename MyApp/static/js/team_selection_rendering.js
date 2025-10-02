@@ -1,9 +1,12 @@
 // Discard local changes and revert to last loaded squad
 function discardLocalChanges() {
-    if (window.currentSquadData && window.serverPlayers) {
+    if (window.localTeams && window.serverPlayers) {
         // Deep copy to avoid reference issues
-        window.currentSquad = JSON.parse(JSON.stringify(window.currentSquadData));
+        window.localTeams = {};
+        console.log(' Reverting to last loaded squad from window.squads:', window.squads);
+        window.localTeams = JSON.parse(JSON.stringify(window.squads));
         window.editMode = false;
+        window.localTeam = window.localTeams[window.selectedgw]
 
         // Rebuild window.localTeam as an object with grouped arrays
         window.localTeam = {
@@ -19,7 +22,7 @@ function discardLocalChanges() {
             'forwards': 'FWD'
         };
         Object.keys(positionMapping).forEach(dbPosition => {
-            const players = window.currentSquad[dbPosition] || [];
+            const players = window.localTeam[dbPosition] || [];
             players.forEach(playerEntry => {
                 let playerName = typeof playerEntry === 'string' ? playerEntry : playerEntry.name;
                 if (!playerName) return;
@@ -34,9 +37,11 @@ function discardLocalChanges() {
             });
         });
 
+        // Set edit mode to false
+        console.log(' Heeere Squad');
+        window.editMode = false;
         // Update all squad-related UI
-        if (typeof updateSquadDisplay === 'function') updateSquadDisplay();
-        if (typeof displayCurrentSquad === 'function') displayCurrentSquad();
+        if (typeof updateSquadDisplay === 'function') updateSquadDisplay(window.localTeams, window.selectedgw);
 
         if (typeof showStatusMessage === 'function') {
             showStatusMessage('Changes discarded. Squad reverted to last loaded state.', 'success');
@@ -46,13 +51,64 @@ function discardLocalChanges() {
             showStatusMessage('No previous squad data to revert to.', 'error');
         }
     }
+
+    // Ensure window.localTeams is reset to the original squads
+    if (window.squads) {
+        window.localTeams = JSON.parse(JSON.stringify(window.squads)); // Deep copy to avoid reference issues
+        console.log('✅ Reverted to original squad data:', window.localTeams);
+    } else {
+        console.error('❌ No original squad data found to revert to.');
+    }
 }
 // Update squad display function (uses localTeam)
-function updateSquadDisplay(squadData) {
+function updateSquadDisplay(squadsData = null, gameweek = window.gw) {
     const squadList = document.getElementById('squad-list');
     squadList.innerHTML = '<div style="color:#888;text-align:center;width:100%;">Loading squad...</div>';
-    console.log('Loaded current squad from API:', squadData);
-    renderSquad(squadData);
+    window.selectedgw = gameweek;
+
+    // If localTeams is not provided, use the current gameweek's data
+    // Use only the localTeams provided; do not fallback to window.squads
+    let squadsDataToUse;
+    if (!squadsData) {
+        squadsDataToUse = window.localTeams || window.squads;
+        if (!squadsDataToUse) {
+            console.error(`❌ No data found for gameweek ${gameweek}.`);
+            squadList.innerHTML = '<div style="color:#888;text-align:center;width:100%;">No squad data available.</div>';
+            return;
+        }
+    } else {
+        squadsDataToUse = squadsData;
+    }
+    squadsData = squadsDataToUse;
+    // Try to find the exact gameweek first
+    let foundSquad = squadsData[gameweek] || null;
+    let foundGw = gameweek;
+
+    // If not found, search backwards for the most recent non-null squad data
+    if (!foundSquad) {
+        const gwNumbers = Object.keys(squadsData)
+            .map(Number)
+            .filter(n => !isNaN(n) && n < gameweek)
+            .sort((a, b) => b - a); // Descending order
+
+        for (let gw of gwNumbers) {
+            if (squadsData[gw]) {
+                foundSquad = squadsData[gw];
+                foundGw = gw;
+                break;
+            }
+        }
+    }
+
+    if (!foundSquad) {
+        squadList.innerHTML = '<div style="color:#888;text-align:center;width:100%;">No squad data available for this or previous gameweeks.</div>';
+        return;
+    }
+
+    console.log(`✅ Loaded data for gameweek ${foundGw}:`, foundSquad);
+    window.localTeam = foundSquad; // Update localTeam with the found gameweek's data
+
+    renderSquad(window.localTeam);
 
     // Update squad badges after rendering squad
     if (typeof updateSquadBadges === 'function') {
@@ -68,7 +124,6 @@ function updateSquadDisplay(squadData) {
             squadRows.forEach(row => row.classList.remove('editable-squad-row'));
         }
     }, 0);
-
 }
 
 // Render players dynamically
@@ -123,31 +178,6 @@ function renderPlayers() {
 }
 
 
-/**
- * Display the current squad using the global squad data (window.localTeam).
- * Renders the squad in formation layout.
- */
-function displayCurrentSquad() {
-    const squadList = document.getElementById('squad-list');
-    squadList.innerHTML = '<div style="color:#888;text-align:center;width:100%;">Loading squad...</div>';
-    fetch('/api/current_squad/')
-        .then(response => response.json())
-        .then(data => {
-            if (!data || !data.current_squad || Object.keys(data.current_squad).length === 0) {
-                squadList.innerHTML = '<div style="color:#888;text-align:center;width:100%;">No squad data available.</div>';
-                return;
-            }
-            window.localTeam = data.current_squad;
-            console.log('Loaded current squad from API:', window.localTeam);
-            renderSquad(window.localTeam);
-            if (typeof updateSquadBadges === 'function') {
-                updateSquadBadges();
-            }
-        })
-        .catch(() => {
-            squadList.innerHTML = '<div style="color:#888;text-align:center;width:100%;">No squad data available.</div>';
-        });
-}
 
 
 function renderSquad(squadData) {
@@ -251,6 +281,6 @@ toggleEditMode = function() {
             makeChangesBtn.classList.remove('active-make-changes-btn');
         }
     }
-    updateSquadDisplay(window.localTeam);
+    updateSquadDisplay(window.localTeams, window.selectedgw);
     if (typeof updateSquadBadges === 'function') updateSquadBadges();
 }

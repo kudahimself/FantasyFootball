@@ -1,10 +1,13 @@
 from django.shortcuts import render, HttpResponse
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from MyApi.models import CurrentSquad, Player
+from MyApi.models import CurrentSquad, Player, UserSquad
 from MyApi.utils.generate_squads import SquadSelector
 import json
 from django.contrib.auth.decorators import login_required
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Create your views here.
 def get_team_map(request):
@@ -1156,31 +1159,65 @@ def get_squad_points(request, squad_number):
 def update_current_squad(request):
     """
     Replace the entire current squad with the provided squad data.
-    Expected POST data: {"squad": [ {"name": ..., "position": ...}, ... ] }
+    Expected POST data: {"squad": [ {"name": ..., "position": ...}, ... ], "gameweek": ... }
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'Only POST method allowed'}, status=405)
     try:
+        logger.info("Received request to update_current_squad")
         data = json.loads(request.body)
+        logger.debug(f"Request body: {data}")
+
         local_team = data.get('squad')
+
+        # Initialize gameweek to None to avoid UnboundLocalError
+        gameweek = data.get('gameweek')
+
+        # Retrieve gameweek from headers if not provided in the body
+        if not gameweek:
+            gameweek = request.headers.get('Gameweek')
+            if gameweek:
+                try:
+                    gameweek = int(gameweek)
+                except ValueError:
+                    logger.warning(f"Invalid gameweek value in headers: {gameweek}")
+                    return JsonResponse({'error': 'Invalid gameweek value in headers.'}, status=400)
+
+        logger.debug(f"Gameweek from headers: {request.headers.get('Gameweek')}")
+        logger.debug(f"Gameweek after processing: {gameweek}")
+        logger.debug(f"Squad data: {local_team}")
+
+        # Ensure squad_dict is initialized to avoid UnboundLocalError
+        squad_dict = None
+
         # Accept both a flat list (legacy) and a grouped dict (new)
         if isinstance(local_team, list):
             # Use conversion utility to group
             from MyApi.utils.squad_conversion import frontend_to_backend_squad
             squad_dict = frontend_to_backend_squad(local_team)
+            logger.debug("Converted flat list to grouped dict")
         elif isinstance(local_team, dict):
             # Already grouped, validate keys
             required_keys = {'goalkeepers', 'defenders', 'midfielders', 'forwards'}
             if not required_keys.issubset(local_team.keys()):
+                logger.warning("Grouped squad dict missing required keys")
                 return JsonResponse({'error': 'Grouped squad dict missing required keys.'}, status=400)
             squad_dict = local_team
         else:
+            logger.error("Invalid squad format")
             return JsonResponse({'error': 'squad must be a list or grouped dict.'}, status=400)
-        current_squad_instance = CurrentSquad.get_or_create_current_squad(request.user)
-        current_squad_instance.squad = squad_dict
-        current_squad_instance.save()
-        return JsonResponse({'success': True, 'squad': current_squad_instance.squad})
+
+        # Update UserSquad instead of CurrentSquad
+        user_squad, created = UserSquad.objects.get_or_create(user=request.user, week=gameweek)
+        logger.info(f"UserSquad {'created' if created else 'retrieved'} for user {request.user} and week {gameweek}")
+
+        user_squad.squad = squad_dict
+        user_squad.save()
+        logger.info("UserSquad updated successfully")
+
+        return JsonResponse({'success': True, 'squad': user_squad.squad, 'gameweek': user_squad.week})
     except Exception as e:
+        logger.exception("An error occurred while updating the current squad")
         return JsonResponse({'error': str(e)}, status=500)
 
 @csrf_exempt
