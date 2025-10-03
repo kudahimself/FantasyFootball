@@ -66,7 +66,7 @@
                         <div class="player-stats">
                             <div class="player-price">£{{ player.cost }}m</div>
                             <div class="player-points">📊 {{ player.elo }}</div>
-                            <div class="player-projected">⭐ {{ player.projected_points }}pts</div>
+                            <div class="player-projected">⭐ Loading...</div>
                         </div>
                         <button class="add-btn" onclick="addPlayer('{{ player.id }}', '{{ player.name|escapejs }}')">+ Add</button>
                     </div>

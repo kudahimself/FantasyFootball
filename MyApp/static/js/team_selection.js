@@ -361,7 +361,7 @@ function filterPlayers(searchTerm = '', positionFilter = 'all') {
 
     // Apply search filter
     let filtered = dynamicAllPlayers;
-    
+    cond
     if (searchTerm) {
         filtered = filtered.filter(player => 
             (player.name && player.name.toLowerCase().includes(searchTerm)) || 

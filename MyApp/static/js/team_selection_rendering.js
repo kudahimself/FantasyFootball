@@ -155,7 +155,7 @@ function renderPlayers() {
         const position = player.position || 'UNK';
         const eloRating = player.elo ? Math.round(player.elo * 10) / 10 : 0;
         const cost = player.cost ? `£${player.cost}m` : '£0.0m';
-        const projectedPoints = player.projected_points || 0;
+        const projectedPoints = player.projected_points_by_gw[window.selectedgw] || 0;
         
         // Position badge colors and display
         const positionMap = {
@@ -176,7 +176,7 @@ function renderPlayers() {
                 <div class="player-stats">
                     <div class="player-price">${cost}</div>
                     <div class="player-points"> 📊 ${eloRating}</div>
-                    <div class="player-projected">⭐ ${projectedPoints}pts</div>
+                    <div class="player-projected"> ⭐ ${projectedPoints}pts</div>
                 </div>
                 <button class="add-btn" onclick="addPlayer('${player.id || name}', '${name}')">+</button>
             </div>
@@ -219,6 +219,9 @@ function renderSquad(squadData) {
             console.warn('[renderSquad] Edit mode OFF but header element not found');
         }
     }
+
+    // Call renderPlayers instead of updateProjectedPoints for all dynamic players
+    renderPlayers();
 
     // Calculate squad attributes
     let totalPoints = 0, totalCost = 0, totalElo = 0, playerCount = 0, subsCount = 0;
@@ -396,3 +399,4 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
