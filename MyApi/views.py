@@ -212,20 +212,60 @@ def remove_player_from_squad(request):
         data = json.loads(request.body)
         position = data.get('position')
         player_name = data.get('player_name')
+        gameweek = data.get('gameweek')
         
         if not position or not player_name:
             return JsonResponse({'error': 'Position and player_name are required'}, status=400)
         
-        current_squad_instance = CurrentSquad.get_or_create_current_squad(request.user)
-        success = current_squad_instance.remove_player(position, player_name)
-        
-        if success:
-            return JsonResponse({
-                'message': f'Player {player_name} removed from {position}',
-                'squad': current_squad_instance.squad
-            })
-        else:
-            return JsonResponse({'error': 'Player not found in specified position'}, status=404)
+        # Get gameweek from request data or headers (optional)
+        if not gameweek:
+            gameweek = request.headers.get('Gameweek')
+            if gameweek:
+                try:
+                    gameweek = int(gameweek)
+                except ValueError:
+                    return JsonResponse({'error': 'Invalid gameweek value in headers.'}, status=400)
+
+        # Update UserSquad instead of CurrentSquad
+        try:
+            user_squad, created = UserSquad.objects.get_or_create(user=request.user, week=gameweek)
+            squad = user_squad.squad or {}
+
+            # Accept both grouped dict and flat list (legacy)
+            if isinstance(squad, dict):
+                group_map = {
+                    'goalkeepers': 'goalkeepers',
+                    'defenders': 'defenders',
+                    'midfielders': 'midfielders',
+                    'forwards': 'forwards'
+                }
+                group = group_map.get(position, position)
+                players_list = squad.get(group, [])
+                new_players_list = [p for p in players_list if p.get('name') != player_name]
+                if len(players_list) == len(new_players_list):
+                    return JsonResponse({'error': 'Player not found in specified position'}, status=404)
+                squad[group] = new_players_list
+                user_squad.squad = squad
+                user_squad.save()
+                return JsonResponse({
+                    'message': f'Player {player_name} removed from {position}',
+                    'squad': user_squad.squad
+                })
+            elif isinstance(squad, list):
+                # Legacy: flat list of players
+                new_squad = [p for p in squad if not (p.get('name') == player_name and p.get('position') == position)]
+                if len(new_squad) == len(squad):
+                    return JsonResponse({'error': 'Player not found in specified position'}, status=404)
+                user_squad.squad = new_squad
+                user_squad.save()
+                return JsonResponse({
+                    'message': f'Player {player_name} removed from {position}',
+                    'squad': user_squad.squad
+                })
+            else:
+                return JsonResponse({'error': 'Invalid squad format.'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': f'Failed to remove player: {str(e)}'}, status=500)
     
     return JsonResponse({'error': 'Only POST method allowed'}, status=405)
 
@@ -1221,38 +1261,48 @@ def update_current_squad(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 @csrf_exempt
+@csrf_exempt
 def recommend_substitutes(request):
     """
     API endpoint to recommend substitutes using projected points optimization.
+    Expects POST data: { "max_recommendations": 4, "budget_constraint": 82.5, "squad": {...} }
     """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Only POST method allowed'})
     try:
-        from MyApi.utils.recommend_substitutes import recommend_substitutes
-        # Get parameters from request
+        from MyApi.utils.recommend_substitutes import recommend_substitutes as recommend_subs_util
         data = json.loads(request.body) if request.body else {}
         max_recommendations = data.get('max_recommendations', 4)
         budget_constraint = data.get('budget_constraint', 100.0)
-        # Get recommendations (now user-specific)
-        result = recommend_substitutes(request.user, max_recommendations, budget_constraint)
+        squad_data = data.get('squad')
+        gameweek = data.get('gameweek')
+        if not squad_data:
+            return JsonResponse({'success': False, 'error': 'Missing squad data in request.'}, status=400)
+        result = recommend_subs_util(request.user, max_recommendations, budget_constraint, squad_data, gameweek)
         return JsonResponse(result)
     except Exception as e:
         return JsonResponse({
-            'success': False, 
-            'error': f'Test substitute recommendation failed: {str(e)}'
+            'success': False,
+            'error': f'Substitute recommendation failed: {str(e)}'
         })
 
 @csrf_exempt
 def recommend_individual_substitutes_api(request):
     """
-    API endpoint to get individual substitute recommendations for the current squad.
-    POST data: {'budget_constraint': 82.5}
+    API endpoint to get individual substitute recommendations for a given squad and gameweek.
+    POST data: {'budget_constraint': 82.5, 'squad': {...}, 'gameweek': ...}
     """
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Only POST method allowed'})
     try:
         data = json.loads(request.body.decode('utf-8')) if request.body else {}
         budget_constraint = float(data.get('budget_constraint', 82.5))
+        squad_data = data.get('squad')
+        gameweek = data.get('gameweek')
+        if not squad_data:
+            return JsonResponse({'success': False, 'error': 'Missing squad data in request.'}, status=400)
         from MyApi.utils.recommend_substitutes import recommend_individual_substitutes
-        result = recommend_individual_substitutes(request.user, budget_constraint=budget_constraint)
+        result = recommend_individual_substitutes(request.user, budget_constraint=budget_constraint, squad_data=squad_data, gameweek=gameweek)
         return JsonResponse({'success': True, 'recommendations': result})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})

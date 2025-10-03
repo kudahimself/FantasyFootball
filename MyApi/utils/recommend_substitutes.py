@@ -1,4 +1,3 @@
-
 """
 Utility functions for recommending substitutes based on projected points optimization.
 Uses PuLP linear programming to find optimal packages of 3-4 substitutions together.
@@ -7,95 +6,62 @@ Uses PuLP linear programming to find optimal packages of 3-4 substitutions toget
 import json
 import pulp
 from django.db.models import Sum
-from MyApi.models import Player, ProjectedPoints, SystemSettings, CurrentSquad
+from MyApi.models import Player, ProjectedPoints, SystemSettings, PlayerFixture
+from django.db.models import OuterRef, Subquery
 
 
-def get_current_squad_with_projected_points(user):
+
+
+
+def get_all_players_with_projected_points(user, squad_data, gameweek=None, exclude_current_squad=True):
     """
-    Get the current squad with projected points data for each player, for a specific user.
+    Get all available players with their projected points for a specific gameweek.
     Args:
         user: Django user instance
-    Returns:
-        dict: Current squad with projected points data
-    """
-    try:
-        current_squad_instance = CurrentSquad.get_or_create_current_squad(user)
-        current_squad = current_squad_instance.squad
-        # Enrich each player with projected points data
-        enriched_squad = {
-            'goalkeepers': [],
-            'defenders': [],
-            'midfielders': [],
-            'forwards': []
-        }
-        current_week = SystemSettings.get_current_gameweek()
-        for position in ['goalkeepers', 'defenders', 'midfielders', 'forwards']:
-            if position in current_squad:
-                for player_data in current_squad[position]:
-                    if isinstance(player_data, dict) and 'name' in player_data:
-                        player_name = player_data['name']
-                        # Get projected points for this player
-                        total_projected = ProjectedPoints.objects.filter(
-                            player_name=player_name
-                        ).aggregate(
-                            total=Sum('adjusted_expected_points')
-                        )['total'] or 0
-                        # Create enriched player data
-                        enriched_player = player_data.copy()
-                        enriched_player['projected_points'] = round(total_projected, 1)
-                        enriched_squad[position].append(enriched_player)
-        return enriched_squad
-    except Exception as e:
-        print(f"Error getting current squad with projected points: {e}")
-        return {
-            'goalkeepers': [],
-            'defenders': [],
-            'midfielders': [],
-            'forwards': []
-        }
-
-
-def get_all_players_with_projected_points(user, exclude_current_squad=True):
-    """
-    Get all available players with their projected points data.
-    Args:
-        user: Django user instance
+        squad_data: Current squad data (dict)
+        gameweek (int, optional): Gameweek to use for projections
         exclude_current_squad (bool): Whether to exclude current squad players
     Returns:
         list: List of all players with projected points, sorted by points descending
     """
     try:
-        current_week = SystemSettings.get_current_gameweek()
-        players = Player.objects.filter(week=current_week)
+        if not PlayerFixture.objects.filter(gameweek=gameweek).exists():
+            print(f"Error: gameweek {gameweek} is not present in the upcoming fixtures")
+            return []
+        # Annotate player fixtures with position and cost from Player model using Subquery
+        player_fixtures = PlayerFixture.objects.filter(gameweek=gameweek).annotate(
+            position=Subquery(
+            Player.objects.filter(name=OuterRef('player_name')).values('position')[:1]
+            ),
+            cost=Subquery(
+            Player.objects.filter(name=OuterRef('player_name')).values('cost')[:1]
+            )
+        )
+
         # Get current squad player names if excluding them
         current_squad_players = set()
-        if exclude_current_squad:
-            current_squad_instance = CurrentSquad.get_or_create_current_squad(user)
-            current_squad = current_squad_instance.squad
+        if exclude_current_squad and squad_data:
             for position in ['goalkeepers', 'defenders', 'midfielders', 'forwards']:
-                if position in current_squad:
-                    for player_data in current_squad[position]:
-                        if isinstance(player_data, dict) and 'name' in player_data:
-                            current_squad_players.add(player_data['name'])
+                for player_data in squad_data.get(position, []):
+                    if isinstance(player_data, dict) and 'name' in player_data:
+                        current_squad_players.add(player_data['name'])
+
         players_with_projections = []
-        for player in players:
+        for pf in player_fixtures:
             # Skip if player is already in current squad (when excluding)
-            if exclude_current_squad and player.name in current_squad_players:
+            if exclude_current_squad and pf.player_name in current_squad_players:
                 continue
-            # Get total projected points for this player
-            total_projected = ProjectedPoints.objects.filter(
-                player_name=player.name
-            ).aggregate(
-                total=Sum('adjusted_expected_points')
-            )['total'] or 0
+            # Use the projected points from the PlayerFixtures table for this gameweek
+            projected_points = getattr(pf, 'projected_points', None)
             players_with_projections.append({
-                'name': player.name,
-                'position': player.position,
-                'team': player.team,
-                'cost': player.cost,
-                'elo': player.elo,
-                'projected_points': round(total_projected, 1)
+                'name': pf.player_name,
+                'position': pf.position,  # Position is now correctly annotated
+                'team': pf.team,
+                'cost': pf.cost,
+                'elo': getattr(pf, 'elo', 0),
+                'projected_points': projected_points
             })
+
         # Sort by projected points (descending)
         players_with_projections.sort(key=lambda x: x['projected_points'], reverse=True)
         return players_with_projections
@@ -243,7 +209,7 @@ def analyze_squad_weaknesses_test(current_squad=None):
     """
     try:
         if current_squad is None:
-            current_squad = get_current_squad_with_projected_points()
+            return Exception("No current squad provided.")
         
         analysis = {
             'position_analysis': {},
@@ -469,7 +435,7 @@ def extract_optimization_results(prob, substitution_options, current_total_cost,
         'available_budget': available_budget
     }
 
-def recommend_substitutes(user, max_recommendations=4, budget_constraint=100.0):
+def recommend_substitutes(user, max_recommendations=4, budget_constraint=82.5, squad_data=None, gameweek=None):
     """
     Orchestrates optimized package substitute recommendations using helper functions.
     Args:
@@ -478,8 +444,8 @@ def recommend_substitutes(user, max_recommendations=4, budget_constraint=100.0):
         budget_constraint: float
     """
     try:
-        current_squad = get_current_squad_with_projected_points(user)
-        all_players = get_all_players_with_projected_points(user, exclude_current_squad=True)
+        current_squad = squad_data
+        all_players = get_all_players_with_projected_points(user, squad_data, gameweek, exclude_current_squad=True)
         current_formation = detect_formation_from_squad(current_squad)
         current_total_points = calculate_squad_total_projected_points(current_squad)
         current_total_cost = 0
@@ -527,7 +493,7 @@ def recommend_substitutes(user, max_recommendations=4, budget_constraint=100.0):
             'package_optimization': True
         }
 
-def recommend_individual_substitutes(user, budget_constraint=82.5):
+def recommend_individual_substitutes(user, budget_constraint=82.5, squad_data=None, gameweek=None):
     """
     Recommend the best individual substitute for each player in the current squad using projected points.
     Args:
@@ -537,8 +503,9 @@ def recommend_individual_substitutes(user, budget_constraint=82.5):
         dict: List of recommended individual substitutions
     """
     try:
-        current_squad = get_current_squad_with_projected_points(user)
-        all_players = get_all_players_with_projected_points(user, exclude_current_squad=True)
+        current_squad = squad_data
+        all_players = get_all_players_with_projected_points(user, squad_data, gameweek, exclude_current_squad=True)
+        print(all_players[:5])  # Debug: print first 5 players
         position_mapping = {
             'goalkeepers': 'Keeper',
             'defenders': 'Defender',

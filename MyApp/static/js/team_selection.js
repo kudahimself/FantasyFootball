@@ -279,11 +279,6 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             console.error('❌ localTeam is undefined or empty.');
         }
-
-        // Load recommendations after squad is loaded
-        setTimeout(function() {
-            loadSubstituteRecommendations();
-        }, 2500);
     }, 500); // Small delay to ensure elements are ready
 });
 
@@ -358,69 +353,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
-
-
-// Load current squad from database (loads into localTeam)
-function loadCurrentSquadFromDatabase() {
-    try {
-        window.localSquads = {};
-        const currentSquadData = window.currentSquadData || {};
-        window.currentSquad = currentSquadData;
-        console.log('📊 Loading user squadd from database:', currentSquadData);
-        let playerData = window.serverPlayers;
-        if (!playerData) {
-            console.error('window.serverPlayers is not defined. Cannot match players.');
-            return;
-        }
-        const positionMapping = {
-            'goalkeepers': 'GKP',
-            'defenders': 'DEF',
-            'midfielders': 'MID',
-            'forwards': 'FWD'
-        };
-        // Build localTeam as an object with grouped arrays
-        window.localTeams = {
-            goalkeepers: [],
-            defenders: [],
-            midfielders: [],
-            forwards: []
-        };
-        Object.keys(positionMapping).forEach(dbPosition => {
-            const players = currentSquadData[dbPosition] || [];
-            players.forEach(playerEntry => {
-                let playerName = typeof playerEntry === 'string' ? playerEntry : playerEntry.name;
-                if (!playerName) return;
-                const playerMatch = playerData.find(p => p.name === playerName);
-                if (playerMatch) {
-                    const expectedPosition = positionMapping[dbPosition];
-                    const correctedPlayer = playerMatch.position === expectedPosition
-                        ? playerMatch
-                        : { ...playerMatch, position: expectedPosition };
-                    window.localTeam[dbPosition].push(correctedPlayer);
-                    console.log(`✅ Added ${playerName} (${expectedPosition}) to local team (${dbPosition})`);
-                } else {
-                    console.warn(`⚠️ Player ${playerName} not found in available players data, skipping.`);
-                }
-            });
-        });
-        // Remove any undefined/null entries just in case
-        Object.keys(window.localTeam).forEach(pos => {
-            window.localTeam[pos] = window.localTeam[pos].filter(Boolean);
-        });
-        const totalPlayers = Object.values(window.localTeam).reduce((acc, arr) => acc + arr.length, 0);
-        console.log(`📊 Loaded ${totalPlayers} players from current squad`);
-        
-        displayCurrentSquad();
-        
-        console.log('✅ Current squad loaded and displayed.');
-    } catch (e) {
-        console.error('❌ Error loading current squad:', e);
-        window.localTeam = [];
-        displayCurrentSquad();
-    }
-}
-
-
 
 
 // Filter players based on search term

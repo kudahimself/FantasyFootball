@@ -30,8 +30,8 @@ def frontend_to_backend_squad(local_team):
     for player in local_team:
         pos = position_map.get(player.get('position'))
         if pos:
-            # Only include relevant fields (id, name, position, team, cost, elo, etc.)
-            player_obj = {k: v for k, v in player.items() if k in ['id', 'name', 'position', 'team', 'cost', 'elo', 'elo', 'projected_points']}
+            # Only include relevant fields, adding `projected_points_by_gw`
+            player_obj = {k: v for k, v in player.items() if k in ['id', 'name', 'position', 'team', 'cost', 'elo', 'projected_points', 'projected_points_by_gw']}
             # Normalize 'elo' to 'elo' for backend
             if 'elo' in player_obj and 'elo' not in player_obj:
                 player_obj['elo'] = player_obj['elo']

@@ -89,7 +89,7 @@
                       <button id="btn-gw-1" type="button" class="btn btn-info">Gameweek</button>
                       <button id="btn-gw-2" type="button" class="btn btn-info">Gameweek</button>
                       <button id="btn-gw-3" type="button" class="btn btn-info">Gameweek</button>
-                      <button id="btn-current-gw" type="button" class="btn btn-success">Current Gameweek</button>
+                      <button id="btn-gw-success" type="button" class="btn btn-success">Current Gameweek</button>
                     </div>
                     <div class="badge bg-primary p-2" style="font-size: 0.9em;">
                         <i class="fas fa-chart-line"></i> Avg. ELO: <span id="squad-avg-elo">--</span>
@@ -129,7 +129,7 @@
             <i class="fas fa-exchange-alt text-primary"></i> Recommended Substitutes
         </h3>
         <div>
-            <button class="btn btn-sm btn-outline-primary" style="color: #fcfafa; border-color: #fcfafa;" onclick="loadSubstituteRecommendations()" title="Get recommendations">
+            <button class="btn btn-sm btn-outline-primary" style="color: #fcfafa; border-color: #fcfafa;" onclick="loadSubstituteRecommendations(window.localTeam, window.selectedgw)" title="Get recommendations">
                 <i class="fas fa-sync-alt" style="color: #fcfafa;"></i> Get Recommendations
             </button>
             <button class="btn btn-sm btn-outline-info" style="color: #fcfafa; border-color: #fcfafa;" id="toggle-sub-mode-btn" onclick="toggleSubstituteMode()" title="Toggle substitute mode">
@@ -198,85 +198,6 @@ let allPlayersFlat = []; // Flat array for search
 let recommendationsVisible = true;
 let currentRecommendationPackage = [];
 
-document.addEventListener('DOMContentLoaded', function() {
-    const currentGameweek = Number('{{ current_gameweek|default:1 }}');
-    for (let i = 1; i <= 3; i++) {
-        const btn = document.getElementById('btn-gw-' + i);
-        if (!btn) continue;
-        const gw = currentGameweek + i;
-        btn.textContent = `Gameweek ${gw}`;
-        btn.onclick = () => {
-            window.selectedgw = gw;
-            let squads = window.localTeams || window.squads || {};
-            let found = squads[gw];
-            if (!found) {
-                // Try previous GWs
-                let prev = Object.keys(squads).map(Number).filter(n => n < gw).sort((a, b) => b - a);
-                found = prev.map(p => squads[p]).find(Boolean);
-                squads[gw] = found ? {...JSON.parse(JSON.stringify(found)), isEmpty: false} : {goalkeepers:[], defenders:[], midfielders:[], forwards:[], isEmpty:true};
-            } else {
-                squads[gw].isEmpty = false;
-            }
-            updateSquadDisplay(squads, gw);
-        };
-    }
-    const currentGwBtn = document.getElementById('btn-current-gw');
-    if (currentGwBtn) currentGwBtn.onclick = () => updateSquadDisplay(window.squads, currentGameweek);
-
-    const gameweekButtons = document.querySelectorAll('[id^="btn-gw-"]');
-
-    gameweekButtons.forEach(button => {
-      button.addEventListener('click', function() {
-        // Remove active class from all buttons
-        gameweekButtons.forEach(btn => btn.classList.remove('active-gameweek'));
-
-        // Add active class to the clicked button
-        this.classList.add('active-gameweek');
-      });
-    });
-
-    if (currentGwBtn) {
-      currentGwBtn.addEventListener('click', function() {
-        // Remove active class from all buttons
-        gameweekButtons.forEach(btn => btn.classList.remove('active-gameweek'));
-
-        // Add active class to the current gameweek button
-        this.classList.add('active-gameweek');
-      });
-    }
-});
-
-function onSelectGameweek(gw) {
-  // TODO: Add your logic to handle gameweek selection
-  window.selectedgw = gw;
-}
-
-function updateSquadButtonStates(activeSquad) {
-    for (let i = 1; i <= 4; i++) {
-        const btn = document.getElementById(`btn-squad-${i}`);
-        if (btn) {
-            btn.classList.toggle('btn-success', i === activeSquad);
-            btn.classList.toggle('btn-outline-success', i !== activeSquad);
-        }
-    }
-}
-
-function updateGameweekButtonStates(activeGameweek) {
-    const gameweekButtons = document.querySelectorAll('[id^="btn-gw-"]');
-
-    gameweekButtons.forEach(button => {
-        const gw = parseInt(button.id.replace('btn-gw-', ''), 10);
-        const isCurrentGameweek = button.id === 'btn-current-gw';
-
-        button.classList.toggle('btn-success', gw === activeGameweek && !isCurrentGameweek);
-        button.classList.toggle('btn-outline-success', gw !== activeGameweek && !isCurrentGameweek);
-        button.classList.toggle('btn-warning', isCurrentGameweek); // Make current gameweek orange
-        button.classList.remove('btn-success', isCurrentGameweek); // Ensure it doesn't appear active
-    });
-}
-
-// Example usage: Call this function whenever a gameweek button is clicked
-// updateGameweekButtonStates(selectedGameweek);
 </script>
 
 <script src="{% static 'js/team_selection.js' %}"></script>

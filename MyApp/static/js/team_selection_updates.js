@@ -13,7 +13,7 @@ function updateSquadBadges() {
         );
     }
     console.log('updateSquadBadges: squad', squad);
-    console.log('updateSquadBadges: localTeam', window.localTeam);
+    console.log('updateSquadBadges Hehehe: localTeam', window.localTeam);
 
     const avgEloElem = document.getElementById('squad-avg-elo');
     const projElem = document.getElementById('squad-projected-points');
@@ -28,7 +28,9 @@ function updateSquadBadges() {
     }
     const totalElo = squad.reduce((sum, p) => sum + (p.elo || 0), 0);
     const avgElo = totalElo / squad.length;
-    const projectedPoints = squad.reduce((sum, p) => sum + (p.projected_points || 0), 0);
+    console.log('Window selected GW:', window.selectedgw);
+    // Calculate projected points for the selected gameweek
+    const projectedPoints = squad.reduce((sum, p) => sum + (p.projected_points_by_gw[window.selectedgw] || 0), 0);
     const totalCost = squad.reduce((sum, p) => sum + (p.cost || 0), 0);
     avgEloElem.textContent = avgElo ? Math.round(avgElo * 10) / 10 : '--';
     projElem.textContent = projectedPoints ? Math.round(projectedPoints * 10) / 10 : '--';
@@ -58,6 +60,7 @@ function addPlayer(playerId, playerName) {
     }
 
     console.log('✅ Found player:', player);
+    console.log('This is the player Data Mate', player);
 
     // Determine position group
     let posGroup = '';
@@ -91,6 +94,7 @@ function addPlayer(playerId, playerName) {
     updateSquadDisplay(window.localTeams, window.selectedgw);
     console.log(`✅ Added ${playerName} to team (${posGroup}). Team size: ${totalPlayers + 1}`);
     showStatusMessage(`Added ${playerName} to your team.`, 'success');
+    console.log('Current localTeam:', window.localTeam);
 }
 
 function removePlayer(playerId, playerName) {
@@ -149,8 +153,14 @@ function applyChangesToBackend() {
         )
         .map(player => {
             const playerObj = {};
-            ['id','name','position','team','cost','elo','projected_points'].forEach(k => {
-                if (player[k] !== undefined) playerObj[k] = player[k];
+            ['id','name','position','team','cost','elo','projected_points_by_gw'].forEach(k => {
+                if (player[k] !== undefined) {
+                    if (k === 'projected_points_by_gw' && typeof player[k] === 'object' && player[k] !== null) {
+                        playerObj[k] = JSON.parse(JSON.stringify(player[k])); // Deep clone the object
+                    } else {
+                        playerObj[k] = player[k];
+                    }
+                }
             });
             return playerObj;
         });
@@ -169,11 +179,15 @@ function applyChangesToBackend() {
     .then(data => {
         if (btn) btn.disabled = false;
         if (data.success) {
-            // Refresh the page after successful save
-            location.reload();
+            // Update localTeams and squads dynamically without reloading the page
             window.localTeams[window.selectedgw] = window.localTeam;
             window.squads = {};
             window.squads = JSON.parse(JSON.stringify(window.localTeams));
+
+            // Optionally refresh the squad display
+            updateSquadDisplay(window.localTeams, window.selectedgw);
+
+            showStatusMessage('Squad saved successfully!', 'success');
         } else {
             // Optionally show a non-intrusive error message
             showStatusMessage('Error saving squad: ' + (data.error || 'Unknown error'), 'error');

@@ -502,6 +502,7 @@ class PlayerFixture(models.Model):
     fixture_date = models.DateTimeField(null=True, blank=True)
     competition = models.CharField(max_length=100, default='Premier League')
     difficulty = models.IntegerField(default=3, help_text="FPL difficulty rating (1-5)")
+    projected_points = models.FloatField(default=0.0, help_text="Projected points for this fixture")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

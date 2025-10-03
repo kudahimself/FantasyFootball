@@ -58,6 +58,7 @@ def apply_opposition_multiplier(expected_points, difficulty_rating, opposition_s
     return expected_points * (1.0 - 0.1 * (difficulty_rating - 3)) * opposition_strength
 
 async def calculate_and_store_projected_points(override_existing=True):
+    await add_current_gameweek_points()
     from asgiref.sync import sync_to_async
     projections_created = 0
     skipped_fixtures = 0
@@ -105,6 +106,13 @@ async def calculate_and_store_projected_points(override_existing=True):
                     adjusted_expected_points=adjusted_points,
                     k_factor=20
                 )
+                # Update the PlayerFixture table with projected points
+                await sync_to_async(PlayerFixture.objects.filter(
+                    player_name=fixture.player_name,
+                    gameweek=fixture.gameweek
+                ).update)(
+                    projected_points=round(adjusted_points, 1)
+                )
                 projections_created += 1
             else:
                 _, created = await sync_to_async(ProjectedPoints.objects.get_or_create)(
@@ -126,6 +134,8 @@ async def calculate_and_store_projected_points(override_existing=True):
                 )
                 if created:
                     projections_created += 1
+                    
+        
         except Exception as e:
             print(f"[ERROR] Projected points for {fixture.player_name} GW{fixture.gameweek}: {e}")
             skipped_fixtures += 1
@@ -170,10 +180,10 @@ async def refresh_fixtures_util(next_gameweeks=3) -> dict:
             'total_projections': 0,
             'fixtures_created': len(players)*next_gameweeks
         }
-        print(f"Projected points calculation complete: {result}")
+        print(f"Fixtures updated: {result}")
         return result
     except Exception as e:
-        print(f"Error in calculate_all_projected_points: {e}")
+        print(f"Error in refreshing fixtures: {e}")
         return {
             'success': False,
             'error': str(e),
@@ -301,3 +311,60 @@ async def get_player_projected_summary(player_name: str) -> Dict[str, Any]:
             'projections': [],
             'error': str(e)
         }
+
+async def add_current_gameweek_points():
+    """
+    Add or update current gameweek points in the PlayerFixture table using the most recent match data.
+    """
+    from asgiref.sync import sync_to_async
+    from MyApi.models import PlayerFixture, PlayerMatch
+    from MyApi.models import SystemSettings
+    
+    print('made it to this function')
+
+    # Get all PlayerFixtures for the current gameweek
+    # Get current gameweek and season
+    current_gw = await sync_to_async(SystemSettings.get_current_gameweek)()
+    current_season = await sync_to_async(SystemSettings.get_current_season)()
+    # Convert season from "2025/26" to "2025/2026" if needed
+    if "/" in current_season and len(current_season.split("/")[1]) == 2:
+        parts = current_season.split("/")
+        current_season = f"{parts[0]}-{parts[0][:2]}{parts[1]}"
+    round_info = f"Gameweek {current_gw}"
+    print(current_season, round_info)
+    print(f"[DEBUG] Adding current points for gameweek {current_gw}, season {current_season}")
+    # Get all PlayerFixtures for the current season and current gameweek
+    fixtures = await sync_to_async(list)(
+        PlayerMatch.objects.filter(round_info=round_info, season=current_season.replace('/', '-'))
+    )
+    
+    print(fixtures[1])
+
+    for fixture in fixtures:
+        try:
+            # Get the most recent PlayerMatch for the player
+            recent_match = await sync_to_async(PlayerMatch.objects.filter(
+                player_name=fixture.player_name
+            ).order_by('-date').first)()
+
+            if not recent_match:
+                print(f"[WARN] No recent match found for player: {fixture.player_name}")
+                continue
+
+            # Use the points from the most recent match
+            current_points = recent_match.points
+
+            # Update or create the PlayerFixture record with current points
+            await sync_to_async(PlayerFixture.objects.update_or_create)(
+                player_name=fixture.player_name,
+                gameweek=fixture.round_info.split()[1],
+                defaults={
+                    'projected_points': current_points
+                }
+            )
+            print(f"[INFO] Updated {fixture.player_name} GW{fixture.round_info.split()[1]} with points: {current_points}")
+        except Exception as e:
+            print(f"[ERROR] Adding current points for {fixture.player_name} GW{fixture.round_info.split()[1]}: {e}")
+
+    # Ensure the call to add_current_gameweek_points is within an async context
+    

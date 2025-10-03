@@ -24,7 +24,7 @@ def team_selection(request):
     Renders player list on the server-side like player_ratings.
     """
     try:
-        from MyApi.models import SystemSettings, ProjectedPoints, UserSquad
+        from MyApi.models import SystemSettings, ProjectedPoints, UserSquad, PlayerFixture
         week = SystemSettings.get_settings().current_gameweek
         players_queryset = Player.objects.filter(week=week)
 
@@ -35,10 +35,13 @@ def team_selection(request):
         players_data = []
         for player in players_queryset:
             try:
-                total_projected = ProjectedPoints.get_total_projected_points(player.name, games=3)
-                projected_points = round(total_projected, 1) if total_projected else 0
+                # Fetch projected points by gameweek from PlayerFixture
+                projected_points_by_gw = {}
+                fixtures = PlayerFixture.objects.filter(player_name=player.name, gameweek__gte=week)
+                for fixture in fixtures:
+                    projected_points_by_gw[fixture.gameweek] = round(fixture.projected_points, 1)
             except Exception:
-                projected_points = 0
+                projected_points_by_gw = {}
 
             players_data.append({
                 'id': player.id,
@@ -47,7 +50,7 @@ def team_selection(request):
                 'position': position_map.get(player.position, player.position),
                 'elo': round(float(player.elo), 1),
                 'cost': float(player.cost),
-                'projected_points': projected_points,
+                'projected_points_by_gw': projected_points_by_gw,  # Include points by gameweek
             })
 
         players_data.sort(key=lambda x: x['elo'], reverse=True)

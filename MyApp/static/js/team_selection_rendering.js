@@ -115,6 +115,15 @@ function updateSquadDisplay(squadsData = null, gameweek = window.gw) {
         updateSquadBadges();
     }
 
+
+    // Load substitutions for the displayed squad based on the toggled substitution mode
+    if (typeof loadSubstituteRecommendations === 'function' && typeof loadIndividualSubstituteRecommendations === 'function') {
+        if (showPackageSubstitutes) {
+            loadSubstituteRecommendations(foundSquad, window.selectedgw);
+        } else {
+            loadIndividualSubstituteRecommendations(foundSquad, window.selectedgw);
+        }
+    }
     // Add editable-squad-row class after squad rows are rendered
     setTimeout(() => {
         const squadRows = document.querySelectorAll('.squad-row');
@@ -284,3 +293,106 @@ toggleEditMode = function() {
     updateSquadDisplay(window.localTeams, window.selectedgw);
     if (typeof updateSquadBadges === 'function') updateSquadBadges();
 }
+
+function updateSquadButtonStates(activeSquad) {
+    for (let i = 1; i <= 4; i++) {
+        const btn = document.getElementById(`btn-squad-${i}`);
+        if (btn) {
+            btn.classList.toggle('btn-success', i === activeSquad);
+            btn.classList.toggle('btn-outline-success', i !== activeSquad);
+        }
+    }
+}
+
+function updateGameweekButtonStates(activeGameweek) {
+    const gameweekButtons = document.querySelectorAll('[id^="btn-gw-"]');
+
+    gameweekButtons.forEach(button => {
+        const gw = parseInt(button.id.replace('btn-gw-', ''), 10);
+        const isCurrentGameweek = button.id === 'btn-gw-success';
+
+        button.classList.toggle('btn-success', gw === activeGameweek && !isCurrentGameweek);
+        button.classList.toggle('btn-outline-success', gw !== activeGameweek && !isCurrentGameweek);
+        button.classList.toggle('btn-warning', isCurrentGameweek); // Make current gameweek orange
+        button.classList.remove('btn-success', isCurrentGameweek); // Ensure it doesn't appear active
+    });
+}
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    const currentGameweek = Number(window.gw) || 1;
+
+    function setupGameweekButton(btn, gw) {
+        if (!btn) return;
+        btn.textContent = `Gameweek ${gw}`;
+        btn.onclick = () => handleGameweekClick(gw);
+    }
+
+    function handleGameweekClick(gw) {
+        window.selectedgw = gw;
+        let squads = window.localTeams || window.squads || {};
+        let found = squads[gw];
+        if (!found) {
+            // Try previous GWs
+            let prev = Object.keys(squads).map(Number).filter(n => n < gw).sort((a, b) => b - a);
+            found = prev.map(p => squads[p]).find(Boolean);
+            squads[gw] = found ? {...JSON.parse(JSON.stringify(found)), isEmpty: false} : {goalkeepers:[], defenders:[], midfielders:[], forwards:[], isEmpty:true};
+        } else {
+            squads[gw].isEmpty = false;
+        }
+        updateSquadDisplay(squads, gw);
+        setActiveGameweekButton(gw);
+    }
+
+    function setActiveGameweekButton(gw) {
+        const gameweekButtons = document.querySelectorAll('[id^="btn-gw-"]');
+        const currentGameweek = Number(window.gw) || 1;
+
+        // Remove active classes from all buttons
+        gameweekButtons.forEach(btn => {
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-info');
+        });
+
+        let activeButton;
+        if (gw === currentGameweek) {
+            // Current gameweek: use btn-gw-success
+            activeButton = document.getElementById('btn-gw-success');
+        } else {
+            // Find button by text content
+            activeButton = Array.from(gameweekButtons).find(btn => {
+                const btnGw = Number(btn.textContent.replace(/\D/g, ''));
+                return btnGw === gw;
+            });
+        }
+
+        if (activeButton) {
+            activeButton.classList.add('btn-success');
+            activeButton.classList.remove('btn-info');
+        }
+    }
+
+    // Setup next 3 gameweek buttons
+    for (let i = 1; i <= 3; i++) {
+        const btn = document.getElementById('btn-gw-' + i);
+        const gw = currentGameweek + i;
+        setupGameweekButton(btn, gw);
+    }
+
+    // Setup current gameweek button
+    const currentGwBtn = document.getElementById('btn-gw-success');
+    if (currentGwBtn) {
+        currentGwBtn.onclick = () => {
+            updateSquadDisplay(window.squads, currentGameweek);
+            setActiveGameweekButton(currentGameweek);
+        };
+    }
+
+    // Add click listeners for active class toggling
+    const gameweekButtons = document.querySelectorAll('[id^="btn-gw-"]');
+    gameweekButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            setActiveGameweekButton(Number(this.textContent.replace(/\D/g, '')));
+        });
+    });
+});

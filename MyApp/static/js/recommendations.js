@@ -14,16 +14,37 @@ function toggleSubstituteMode() {
     }
     // Fetch and render recommendations for the selected mode
     if (showPackageSubstitutes) {
-        loadSubstituteRecommendations();
+        loadSubstituteRecommendations(window.localTeam, window.selectedgw);
     } else {
-        loadIndividualSubstituteRecommendations();
+        loadIndividualSubstituteRecommendations(window.localTeam, window.selectedgw);
     }
-function loadIndividualSubstituteRecommendations() {
+}
+
+function loadIndividualSubstituteRecommendations(squadData = null, gameweek = null) {
+    if (!squadData) {
+        document.getElementById('recommendations-loading').style.display = 'none';
+        showRecommendationsError('No squad data available');
+        return;
+    }
+
+    squadData = transformSquadDataForGameweek(squadData, gameweek);
+
     console.log('Loading individual substitute recommendations...');
+
+    // Show loading state
     document.getElementById('recommendations-loading').style.display = 'block';
     document.getElementById('recommendations-empty').style.display = 'none';
     document.getElementById('recommendations-list').style.display = 'none';
+    // Hide summary for individual mode
+    const summaryElement = document.getElementById('recommendations-summary');
+    if (summaryElement) summaryElement.style.display = 'none';
     document.getElementById('recommendations-error').style.display = 'none';
+
+    const bodyData = {
+        budget_constraint: 82.5,
+        squad: squadData,
+        gameweek: gameweek
+    };
 
     fetch('/api/recommend_individual_substitutes/', {
         method: 'POST',
@@ -31,13 +52,13 @@ function loadIndividualSubstituteRecommendations() {
             'Content-Type': 'application/json',
             'X-CSRFToken': getCsrfToken()
         },
-        body: JSON.stringify({ budget_constraint: 82.5 })
+        body: JSON.stringify(bodyData)
     })
     .then(response => response.json())
     .then(data => {
         document.getElementById('recommendations-loading').style.display = 'none';
-        if (data.success && data.recommendations) {
-            displayIndividualSubstituteRecommendations(data.recommendations);
+        if (data.success) {
+            displayIndividualSubstituteRecommendations(data);
         } else {
             showRecommendationsError(data.error || 'Failed to get individual recommendations');
         }
@@ -72,36 +93,47 @@ function displayIndividualSubstituteRecommendations(result) {
     }
     document.getElementById('recommendations-list').style.display = 'block';
 }
-}
 
 
-function loadSubstituteRecommendations() {
+function loadSubstituteRecommendations(squadData = null, gameweek = null) {
+    if (!squadData) {
+        document.getElementById('recommendations-loading').style.display = 'none';
+        showRecommendationsError('No squad data available');
+        return;
+    }
+
+    squadData = transformSquadDataForGameweek(squadData, gameweek);
+
     console.log('Loading substitute recommendations...');
-    
+
     // Show loading state
     document.getElementById('recommendations-loading').style.display = 'block';
     document.getElementById('recommendations-empty').style.display = 'none';
     document.getElementById('recommendations-list').style.display = 'none';
-        // Show summary for package mode
-        const summaryElement = document.getElementById('recommendations-summary');
-        if (summaryElement) summaryElement.style.display = 'block';
+    // Show summary for package mode
+    const summaryElement = document.getElementById('recommendations-summary');
+    if (summaryElement) summaryElement.style.display = 'block';
     document.getElementById('recommendations-error').style.display = 'none';
-    
+
+    const bodyData = {
+        max_recommendations: 4,
+        budget_constraint: 82.5,
+        squad: squadData,
+        gameweek: gameweek
+    };
+
     fetch('/api/recommend_substitutes/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': getCsrfToken()
         },
-        body: JSON.stringify({
-            max_recommendations: 4,
-            budget_constraint: 82.5
-        })
+        body: JSON.stringify(bodyData)
     })
     .then(response => response.json())
     .then(data => {
         document.getElementById('recommendations-loading').style.display = 'none';
-        
+
         if (data.success) {
             displaySubstituteRecommendations(data);
         } else {
@@ -367,7 +399,7 @@ function applySubstitutionsSequentially(substitutions, index) {
         // Refresh the squad and recommendations
         loadCurrentSquadFromDatabase();
         setTimeout(() => {
-            loadSubstituteRecommendations();
+            loadSubstituteRecommendations(window.localTeam, window.selectedgw);
         }, 1500);
         return;
     }
@@ -426,62 +458,30 @@ function applySubstitutionsSequentially(substitutions, index) {
         showStatusMessage(`Error in substitution ${index + 1}: ${error.message}`, 'error');
     });
 }
-
-function makeSubstitution(currentPlayerName, substitutePlayerName, position) {
+async function makeSubstitution(currentPlayerName, substitutePlayerName, position) {
     if (!confirm(`Are you sure you want to replace ${currentPlayerName} with ${substitutePlayerName}?`)) {
         return;
     }
-    
-    console.log(`Making substitution: ${currentPlayerName} → ${substitutePlayerName} (${position})`);
-    
-    // First remove the current player
-    fetch('/api/remove-player/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
-        },
-        body: JSON.stringify({
-            position: position,
-            player_name: currentPlayerName
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success || !data.error) {
-            // Then add the substitute
-            return fetch('/api/add-player/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken()
-                },
-                body: JSON.stringify({
-                    position: position,
-                    player_name: substitutePlayerName
-                })
-            });
-        } else {
-            throw new Error(data.error || 'Failed to remove player');
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success || !data.error) {
-            showStatusMessage(`Successfully replaced ${currentPlayerName} with ${substitutePlayerName}!`, 'success');
-            // Refresh the squad and recommendations
-            loadCurrentSquadFromDatabase();
-            setTimeout(() => {
-                loadSubstituteRecommendations();
-            }, 1000);
-        } else {
-            throw new Error(data.error || 'Failed to add substitute player');
-        }
-    })
-    .catch(error => {
+
+    console.log(`Making substitution: ${currentPlayerName} → ${substitutePlayerName} (${position}) for GW${window.selectedgw}`);
+
+    try {
+        // Remove the current player
+        await removePlayer(position, currentPlayerName, window.selectedgw);
+
+        // Add the substitute player
+        await addPlayer(position, substitutePlayerName, window.selectedgw);
+
+
+        showStatusMessage(`Successfully replaced ${currentPlayerName} with ${substitutePlayerName} for GW${window.selectedgw}!`, 'success');
+        // Refresh the squad and recommendations
+        setTimeout(() => {
+            loadSubstituteRecommendations(window.localTeam, window.selectedgw);
+        }, 1000);
+    } catch (error) {
         console.error('Error making substitution:', error);
         showStatusMessage(`Error making substitution: ${error.message}`, 'error');
-    });
+    }
 }
 
 function showRecommendationsError(message) {
@@ -502,4 +502,24 @@ function toggleRecommendationsSection() {
         icon.className = 'fas fa-eye';
         recommendationsVisible = true;
     }
+}
+
+function transformSquadDataForGameweek(squadData, gameweek) {
+    const transformedSquad = {};
+
+    ['goalkeepers', 'defenders', 'midfielders', 'forwards'].forEach(position => {
+        transformedSquad[position] = squadData[position].map(player => {
+            return {
+                id: player.id,
+                name: player.name,
+                position: player.position,
+                team: player.team,
+                cost: player.cost,
+                elo: player.elo,
+                projected_points: player.projected_points_by_gw[gameweek] || 0 // Use points for the given gameweek
+            };
+        });
+    });
+
+    return transformedSquad;
 }
